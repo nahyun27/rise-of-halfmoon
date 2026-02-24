@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { MoonCard } from "../components/MoonCard";
 import { MoonCard as MoonCardType, GameState, BoardNode } from "../types/game";
 import { evaluateGraphPlacement, ScoringEvent } from "../utils/scoring";
+import { aiTurn } from "../utils/ai";
 import { LEVEL_LAYOUTS } from "../constants/layouts";
 import { TutorialOverlay } from "../components/TutorialOverlay";
 import { LevelCompleteOverlay } from "../components/LevelCompleteOverlay";
@@ -44,14 +45,8 @@ export default function Home() {
 
   const [gameState, setGameState] = useState<GameState>({
     layout: JSON.parse(JSON.stringify(currentLayout)), // deep copy to allow mutations
-    playerHand: [
-      { id: 'p1', phase: 0, owner: 'player' },
-      { id: 'p2', phase: 4, owner: 'player' },
-      { id: 'p3', phase: 2, owner: 'player' },
-      { id: 'p4', phase: 3, owner: 'player' },
-      { id: 'p5', phase: 1, owner: 'player' },
-    ],
-    opponentHand: [],
+    playerHand: Array(5).fill(null).map((_, i) => ({ id: `p${i}-${Date.now()}`, phase: Math.floor(Math.random() * 8), owner: 'player' })),
+    opponentHand: Array(5).fill(null).map((_, i) => ({ id: `o${i}-${Date.now()}`, phase: Math.floor(Math.random() * 8), owner: 'opponent' })),
     playerScore: 0,
     opponentScore: 0,
     playerHealth: 3,
@@ -63,6 +58,7 @@ export default function Home() {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   const [showLevelComplete, setShowLevelComplete] = useState(false);
+  const [isOpponentThinking, setIsOpponentThinking] = useState(false);
 
   const isBoardEmpty = gameState.layout.nodes.every(node => node.card === null);
   const isGameOver = gameState.playerHand.length === 0 || gameState.layout.nodes.every(node => node.card !== null);
@@ -81,7 +77,7 @@ export default function Home() {
       setGameState({
         layout: JSON.parse(JSON.stringify(LEVEL_LAYOUTS[next])),
         playerHand: Array(5).fill(null).map((_, i) => ({ id: `p${i}-${Date.now()}`, phase: Math.floor(Math.random() * 8), owner: 'player' })),
-        opponentHand: [],
+        opponentHand: Array(5).fill(null).map((_, i) => ({ id: `o${i}-${Date.now()}`, phase: Math.floor(Math.random() * 8), owner: 'opponent' })),
         playerScore: 0,
         opponentScore: 0,
         playerHealth: 3,
@@ -96,7 +92,7 @@ export default function Home() {
     setGameState({
       layout: JSON.parse(JSON.stringify(LEVEL_LAYOUTS[currentLevelIndex])),
       playerHand: Array(5).fill(null).map((_, i) => ({ id: `p${i}-${Date.now()}`, phase: Math.floor(Math.random() * 8), owner: 'player' })),
-      opponentHand: [],
+      opponentHand: Array(5).fill(null).map((_, i) => ({ id: `o${i}-${Date.now()}`, phase: Math.floor(Math.random() * 8), owner: 'opponent' })),
       playerScore: 0,
       opponentScore: 0,
       playerHealth: 3,
@@ -119,6 +115,24 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (gameState.currentTurn === 'opponent' && !isGameOver) {
+      setIsOpponentThinking(true);
+      const timer = setTimeout(() => {
+        // Map level 1-5 to AI difficult 0-2
+        const difficulty = currentLevelIndex > 2 ? 2 : currentLevelIndex;
+        const move = aiTurn(gameState, difficulty);
+        if (move) {
+          handleNodeClick(move.nodeId, move.cardId, true);
+        } else {
+          setGameState(prev => ({ ...prev, currentTurn: 'player' }));
+        }
+        setIsOpponentThinking(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.currentTurn, isGameOver, currentLevelIndex]);
+
   const isValidPlacement = (nodeId: string) => {
     const node = gameState.layout.nodes.find(n => n.id === nodeId);
     if (!node || node.card !== null) return false;
@@ -132,23 +146,29 @@ export default function Home() {
     return false;
   };
 
-  const handleNodeClick = (nodeId: string) => {
-    if (!selectedCardId) return;
+  const handleNodeClick = (nodeId: string, overrideCardId?: string, isAiTurn: boolean = false) => {
+    if (!isAiTurn && gameState.currentTurn !== 'player') return;
+
+    const useCardId = overrideCardId || selectedCardId;
+    if (!useCardId) return;
     if (!isValidPlacement(nodeId)) return;
 
-    const selectedCardIndex = gameState.playerHand.findIndex(card => card.id === selectedCardId);
+    const handToUse = isAiTurn ? gameState.opponentHand : gameState.playerHand;
+    const selectedCardIndex = handToUse.findIndex(card => card.id === useCardId);
     if (selectedCardIndex === -1) return;
 
-    const card = gameState.playerHand[selectedCardIndex];
+    const card = handToUse[selectedCardIndex];
+    const newOwner = isAiTurn ? 'opponent' : 'player';
 
     const newNodes = gameState.layout.nodes.map(n =>
-      n.id === nodeId ? { ...n, card: { ...card, owner: 'player' as const } } : { ...n }
+      n.id === nodeId ? { ...n, card: { ...card, owner: newOwner as 'player' | 'opponent' } } : { ...n }
     );
 
     // Evaluate Scorings
     const events = evaluateGraphPlacement(newNodes, nodeId);
 
     let addedPlayerScore = 0;
+    let addedOpponentScore = 0;
 
     const newPopups: ScorePopupData[] = [];
     const newHighlightNodes: HighlightNode[] = [];
@@ -156,13 +176,14 @@ export default function Home() {
 
     events.forEach((event, i) => {
       if (event.owner === 'player') addedPlayerScore += event.points;
+      else if (event.owner === 'opponent') addedOpponentScore += event.points;
 
       // If it's a chain, steal cards by changing ownership
       if (event.type === 'CHAIN') {
         event.nodeIds.forEach(id => {
           const targetNode = newNodes.find(n => n.id === id);
           if (targetNode && targetNode.card) {
-            targetNode.card.owner = 'player';
+            targetNode.card.owner = newOwner;
           }
         });
       }
@@ -187,18 +208,30 @@ export default function Home() {
       });
     });
 
-    const newHand = [...gameState.playerHand];
+    const newHand = [...handToUse];
     newHand.splice(selectedCardIndex, 1);
+
+    // Replenish hand
+    newHand.push({
+      id: `${newOwner}-${Date.now()}`,
+      phase: Math.floor(Math.random() * 8),
+      owner: newOwner
+    });
 
     setGameState(prev => ({
       ...prev,
       layout: { ...prev.layout, nodes: newNodes },
-      playerHand: newHand,
-      playerScore: prev.playerScore + addedPlayerScore
+      playerHand: isAiTurn ? prev.playerHand : newHand,
+      opponentHand: isAiTurn ? newHand : prev.opponentHand,
+      playerScore: prev.playerScore + addedPlayerScore,
+      opponentScore: prev.opponentScore + addedOpponentScore,
+      currentTurn: isAiTurn ? 'player' : 'opponent'
     }));
 
-    setSelectedCardId(null);
-    setHoveredNodeId(null);
+    if (!isAiTurn) {
+      setSelectedCardId(null);
+      setHoveredNodeId(null);
+    }
 
     if (newPopups.length > 0) {
       setScorePopups(prev => [...prev, ...newPopups]);
@@ -297,11 +330,26 @@ export default function Home() {
         })}
 
         {/* Opponent Area */}
-        <div className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-red-950/20 to-black/40 border border-red-500/20 rounded-2xl backdrop-blur-md shadow-[0_0_30px_rgba(220,38,38,0.05)]">
-          <div className="text-xl font-bold tracking-widest text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]">OPPONENT</div>
-          <div className="flex gap-8 items-center">
+        <div className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-red-950/20 to-black/40 border border-red-500/20 rounded-2xl backdrop-blur-md shadow-[0_0_30px_rgba(220,38,38,0.05)] relative overflow-hidden">
+          <div className="text-xl font-bold tracking-widest text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10">OPPONENT</div>
+
+          {/* AI Thinking Indicator */}
+          {isOpponentThinking && (
+            <div className="absolute inset-0 flex items-center justify-center bg-red-950/40 backdrop-blur-sm z-0">
+              <div className="text-red-300 font-mono tracking-[0.3em] flex items-center gap-2 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]">
+                HALF MOON IS THINKING
+                <span className="flex gap-1 ml-2">
+                  <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
+                  <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
+                  <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-8 items-center z-10 transition-opacity duration-300" style={{ opacity: isOpponentThinking ? 0.2 : 1 }}>
             <span className="text-lg font-mono text-gray-300 transition-all duration-300">{gameState.opponentScore} PTS</span>
-            <span className="text-2xl drop-shadow-[0_0_5px_rgba(220,38,38,0.8)] z-10">{'❤️'.repeat(gameState.opponentHealth)}</span>
+            <span className="text-2xl drop-shadow-[0_0_5px_rgba(220,38,38,0.8)]">{'❤️'.repeat(gameState.opponentHealth)}</span>
           </div>
         </div>
 
