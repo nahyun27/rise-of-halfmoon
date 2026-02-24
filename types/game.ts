@@ -4,6 +4,7 @@ export interface MoonCard {
   id: string;
   phase: number; // 0-7
   owner: 'player' | 'opponent' | null;
+  scoredBy?: 'player' | 'opponent'; // Who scored this card
 }
 
 export interface BoardNode {

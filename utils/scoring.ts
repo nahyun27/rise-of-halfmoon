@@ -23,14 +23,17 @@ export function checkPhasePairs(nodeMap: NodeMap, placedNode: BoardNode): Scorin
   const card = placedNode.card;
   if (!card) return [];
 
-  for (const neighborId of placedNode.connectedTo) {
-    const neighbor = nodeMap.get(neighborId);
+  const neighbors = Array.from(nodeMap.values()).filter(n =>
+    placedNode.connectedTo.includes(n.id) || n.connectedTo.includes(placedNode.id)
+  );
+
+  for (const neighbor of neighbors) {
     if (neighbor && neighbor.card && neighbor.card.phase === card.phase) {
       events.push({
         points: 1,
         owner: card.owner as 'player' | 'opponent',
         type: 'PAIR',
-        nodeIds: [placedNode.id, neighborId]
+        nodeIds: [placedNode.id, neighbor.id]
       });
     }
   }
@@ -42,14 +45,17 @@ export function checkFullMoonPairs(nodeMap: NodeMap, placedNode: BoardNode): Sco
   const card = placedNode.card;
   if (!card) return [];
 
-  for (const neighborId of placedNode.connectedTo) {
-    const neighbor = nodeMap.get(neighborId);
+  const neighbors = Array.from(nodeMap.values()).filter(n =>
+    placedNode.connectedTo.includes(n.id) || n.connectedTo.includes(placedNode.id)
+  );
+
+  for (const neighbor of neighbors) {
     if (neighbor && neighbor.card && Math.abs(neighbor.card.phase - card.phase) === 4) {
       events.push({
         points: 2,
         owner: card.owner as 'player' | 'opponent',
         type: 'FULL_MOON',
-        nodeIds: [placedNode.id, neighborId]
+        nodeIds: [placedNode.id, neighbor.id]
       });
     }
   }
@@ -73,13 +79,16 @@ export function findLunarChains(nodeMap: NodeMap, placedNode: BoardNode): Scorin
     let longestPath: string[] = [currentId];
     visited.add(currentId);
 
-    for (const nId of node.connectedTo) {
-      if (!visited.has(nId)) {
-        const neighbor = nodeMap.get(nId);
+    const neighbors = Array.from(nodeMap.values()).filter(n =>
+      node.connectedTo.includes(n.id) || n.connectedTo.includes(node.id)
+    );
+
+    for (const neighbor of neighbors) {
+      if (!visited.has(neighbor.id)) {
         if (neighbor && neighbor.card) {
           const expectedPhase = (node.card.phase + phaseDelta + 8) % 8;
           if (neighbor.card.phase === expectedPhase) {
-            const subPath = dfs(nId, phaseDelta, new Set(visited));
+            const subPath = dfs(neighbor.id, phaseDelta, new Set(visited));
             if (subPath.length + 1 > longestPath.length) {
               longestPath = [currentId, ...subPath];
             }

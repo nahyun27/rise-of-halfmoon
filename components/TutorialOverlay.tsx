@@ -149,17 +149,15 @@ const DemoSteal = () => (
 const DemoWin = () => (
   <div className="flex flex-col items-center justify-center my-8 gap-6 relative w-full">
     <div className="flex items-center gap-16 font-mono text-xl">
-      <div className="flex flex-col items-center opacity-50 scale-90 bg-red-950/30 p-8 rounded-3xl border border-red-500/20 backdrop-blur-sm">
-        <span className="text-red-400 font-bold mb-4 tracking-widest text-lg">OPPONENT</span>
-        <span className="text-4xl text-gray-300">12 PTS</span>
-        <span className="text-2xl mt-4 tracking-widest drop-shadow-[0_0_5px_rgba(220,38,38,0.8)]">💔💔💔</span>
+      <div className="flex flex-col items-center opacity-50 scale-90 bg-red-950/30 p-8 rounded-3xl border border-red-500/20 backdrop-blur-sm shadow-[0_0_20px_rgba(220,38,38,0.1)]">
+        <span className="text-red-400 font-bold mb-4 tracking-widest text-lg px-4 py-1 border-b border-red-500/30">HALF MOON</span>
+        <span className="text-4xl text-gray-300 font-bold mt-4">12 PTS</span>
       </div>
-      <div className="text-6xl font-black text-white/10 italic">VS</div>
-      <div className="flex flex-col items-center drop-shadow-[0_0_30px_rgba(165,180,252,0.4)] scale-110 bg-indigo-950/40 p-8 rounded-3xl border border-indigo-400/40 backdrop-blur-md relative">
-        <div className="absolute -top-6 text-yellow-300 font-black tracking-widest text-xl animate-pulse bg-yellow-900/60 px-6 py-2 rounded-xl border border-yellow-500/50 whitespace-nowrap">WINNER!</div>
-        <span className="text-indigo-300 font-bold mb-4 tracking-widest text-lg mt-2">YOU</span>
-        <span className="text-5xl text-yellow-400 font-black drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]">18 PTS</span>
-        <span className="text-2xl mt-4 tracking-widest drop-shadow-[0_0_5px_rgba(220,38,38,0.8)]">❤️❤️❤️</span>
+      <div className="text-6xl font-black text-white/5 italic px-4">VS</div>
+      <div className="flex flex-col items-center drop-shadow-[0_0_30px_rgba(165,180,252,0.4)] scale-110 bg-indigo-950/40 p-8 rounded-3xl border border-indigo-400/40 backdrop-blur-md relative shadow-[0_0_40px_rgba(99,102,241,0.2)]">
+        <div className="absolute -top-6 text-yellow-300 font-black tracking-widest text-xl animate-pulse bg-yellow-900/60 px-6 py-2 rounded-xl border border-yellow-500/50 whitespace-nowrap shadow-[0_0_15px_rgba(250,204,21,0.4)]">WINNER!</div>
+        <span className="text-indigo-300 font-bold mb-4 tracking-widest text-lg mt-2 px-4 py-1 border-b border-indigo-500/30">YOU</span>
+        <span className="text-5xl text-yellow-400 font-black drop-shadow-[0_0_15px_rgba(250,204,21,0.5)] mt-4">18 PTS</span>
       </div>
     </div>
   </div>
@@ -242,7 +240,7 @@ const tutorialSteps = [
     content: (
       <div className="text-left w-4/5 mx-auto">
         <p className="text-lg text-indigo-100/80 leading-relaxed mb-4 tracking-wide">
-          The game ends when the board is completely full or neither player has cards left.
+          The game ends when the board is <strong className="text-indigo-300">completely full</strong>.
         </p>
         <ul className="text-lg text-indigo-200/70 text-left list-disc pl-6 space-y-2 mb-4 tracking-wide">
           <li><strong className="text-indigo-300">Final Score:</strong> Player with the most points wins.</li>

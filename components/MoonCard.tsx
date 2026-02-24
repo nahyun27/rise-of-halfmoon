@@ -13,10 +13,12 @@ interface MoonCardProps {
 
 export const MoonCard: React.FC<MoonCardProps> = ({ card, onClick, isFaceDown = false }) => {
   const getBorderColor = () => {
-    switch (card.owner) {
+    if (!card.scoredBy) return 'border-transparent shadow-none';
+
+    switch (card.scoredBy) {
       case 'player': return 'border-white shadow-[0_0_12px_rgba(255,255,255,0.4)]';
       case 'opponent': return 'border-black shadow-[0_0_15px_rgba(0,0,0,0.8)]';
-      default: return 'border-gray-500';
+      default: return 'border-transparent shadow-none';
     }
   };
 
@@ -38,8 +40,8 @@ export const MoonCard: React.FC<MoonCardProps> = ({ card, onClick, isFaceDown = 
         ${getBorderColor()}
       `}
       style={{
-        boxShadow: card.owner === 'player' ? '0 0 15px rgba(255,255,255,0.3)' :
-          card.owner === 'opponent' ? '0 0 15px rgba(0,0,0,0.4)' : undefined
+        boxShadow: card.scoredBy === 'player' ? '0 0 15px rgba(255,255,255,0.3)' :
+          card.scoredBy === 'opponent' ? '0 0 15px rgba(0,0,0,0.4)' : undefined
       }}
     >
       {isFaceDown ? (

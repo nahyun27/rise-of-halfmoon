@@ -36,6 +36,7 @@ interface ScorePopupData {
   points: number;
   type: HighlightType;
   nodeId: string;
+  owner?: 'player' | 'opponent';
 }
 
 const generateDeck = (size: number, owner: 'player' | 'opponent'): MoonCardType[] => {
@@ -103,6 +104,66 @@ function playCompletionSound() {
   } catch (e) { }
 }
 
+function playMultipleChainSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const notes = [400, 500, 600, 700, 800, 900];
+    notes.forEach((freq, i) => {
+      setTimeout(() => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.frequency.value = freq;
+        osc.type = 'triangle';
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.2);
+      }, i * 100);
+    });
+  } catch (e) { }
+}
+
+function playGameOverSound(result: 'win' | 'lose') {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (result === 'win') {
+      const notes = [523, 659, 784, 1047];
+      notes.forEach((freq, i) => {
+        setTimeout(() => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.frequency.value = freq;
+          osc.type = 'triangle';
+          gain.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.8);
+        }, i * 150);
+      });
+    } else {
+      const notes = [440, 392, 349, 294];
+      notes.forEach((freq, i) => {
+        setTimeout(() => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.frequency.value = freq;
+          osc.type = 'sine';
+          gain.gain.setValueAtTime(0.12, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.6);
+        }, i * 200);
+      });
+    }
+  } catch (e) { }
+}
+
 function useBackgroundMusic() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -145,6 +206,48 @@ function useBackgroundMusic() {
 }
 
 // GameControls are now inline in the Layout.
+
+function GamePauseMenu({ onResume, onExit, onOpenTutorial, currentLevel, playerScore }: { onResume: () => void, onExit: () => void, onOpenTutorial: () => void, currentLevel: string, playerScore: number }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="fixed inset-0 bg-black/80 backdrop-blur-md z-[1000] flex items-center justify-center"
+    >
+      <div className="bg-gradient-to-br from-[#1a1a3e] to-[#0a0a1a] border-2 border-indigo-400/30 rounded-[2rem] p-12 min-w-[400px] text-center shadow-[0_0_50px_rgba(99,102,241,0.2)]">
+        <h2 className="text-4xl font-black text-white mb-10 tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">⏸️ PAUSED</h2>
+
+        <div className="flex flex-col gap-5 my-8">
+          <button
+            onClick={onResume}
+            className="py-4 px-8 rounded-xl text-lg font-bold uppercase tracking-widest bg-gradient-to-br from-indigo-600 to-purple-600 text-white hover:scale-105 hover:shadow-[0_8px_20px_rgba(99,102,241,0.4)] transition-all border-none outline-none cursor-pointer"
+          >
+            ▶️ Continue
+          </button>
+
+          <button
+            onClick={onOpenTutorial}
+            className="py-4 px-8 rounded-xl text-lg font-bold uppercase tracking-widest bg-indigo-950/40 text-indigo-200 border border-indigo-500/30 hover:bg-indigo-900/60 transition-all outline-none cursor-pointer"
+          >
+            📖 How to Play
+          </button>
+
+          <button
+            onClick={onExit}
+            className="py-4 px-8 rounded-xl text-lg font-bold uppercase tracking-widest bg-red-500/20 text-red-500 border border-red-500 hover:bg-red-500/30 transition-all outline-none cursor-pointer"
+          >
+            🚪 Exit to Menu
+          </button>
+        </div>
+
+        <div className="text-indigo-200/80 font-mono tracking-widest mt-8 pt-8 border-t border-indigo-500/30">
+          <p className="mb-2 uppercase text-sm">{currentLevel}</p>
+          <p className="font-bold text-white text-lg">{playerScore} PTS</p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 
 function DraggableCard({ card, isSelected, onClick, disabled, onDragStart, onDragEnd }: { card: MoonCardType, isSelected: boolean, onClick: () => void, disabled: boolean, onDragStart: () => void, onDragEnd: () => void }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -216,6 +319,7 @@ function DroppableNode({ node, children, isValid, isHovered, onClick, onDrop, on
 
   return (
     <div
+      id={`node-${node.id}`}
       onClick={onClick}
       onDragOver={handleDragOver}
       onDragEnter={(e) => {
@@ -261,10 +365,13 @@ export default function Home() {
     opponentHealth: 3,
     currentTurn: 'player'
   });
-
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const [isOpponentThinking, setIsOpponentThinking] = useState(false);
+  const [aiActionState, setAiActionState] = useState<{ phase: 'idle' | 'thinking' | 'highlight' | 'play', cardId: string | null, targetNodeId: string | null }>({ phase: 'idle', cardId: null, targetNodeId: null });
+  const [isPaused, setIsPaused] = useState(false);
+  const [chainPopups, setChainPopups] = useState<{ id: string, text: string }[]>([]);
+  const [multipleChainsPopup, setMultipleChainsPopup] = useState<{ count: number, points: number } | null>(null);
+  const [aiPlayOffset, setAiPlayOffset] = useState({ x: 0, y: 0 });
 
   // Visual effects state
   const [scorePopups, setScorePopups] = useState<ScorePopupData[]>([]);
@@ -314,23 +421,61 @@ export default function Home() {
 
   useEffect(() => {
     if (gameState.phase === 'playing' && isGameOver) {
-      const pScore = gameState.playerScore;
-      const oScore = gameState.opponentScore;
+      setGameState(prev => ({ ...prev, phase: 'endGameCounting' as GamePhase }));
 
-      const timer = setTimeout(() => {
-        if (pScore > oScore) {
-          // Win
+      let currentOpponentScore = gameState.opponentScore;
+      let currentPlayerScore = gameState.playerScore;
+
+      const nodes = gameState.layout.nodes;
+      const opponentNodes = nodes.filter(n => n.card && n.card.scoredBy === 'opponent');
+      const playerNodes = nodes.filter(n => n.card && n.card.scoredBy === 'player');
+
+      // Helper function to animate score counting
+      const renderCounting = async () => {
+        // 1. Wait a moment
+        await delay(1000);
+
+        // 2. Count Opponent Cards
+        for (let i = 0; i < opponentNodes.length; i++) {
+          const node = opponentNodes[i];
+          setHighlightedNodes(prev => [...prev, { nodeId: node.id, type: 'PAIR' }]);
+          playSimpleChime();
+          currentOpponentScore += 1;
+          setGameState(prev => ({ ...prev, opponentScore: prev.opponentScore + 1 }));
+          await delay(300);
+          setHighlightedNodes(prev => prev.filter(n => n.nodeId !== node.id));
+        }
+
+        await delay(1000);
+
+        // 3. Count Player Cards
+        for (let i = 0; i < playerNodes.length; i++) {
+          const node = playerNodes[i];
+          setHighlightedNodes(prev => [...prev, { nodeId: node.id, type: 'FULL_MOON' }]);
+          playSimpleChime();
+          currentPlayerScore += 1;
+          setGameState(prev => ({ ...prev, playerScore: prev.playerScore + 1 }));
+          await delay(300);
+          setHighlightedNodes(prev => prev.filter(n => n.nodeId !== node.id));
+        }
+
+        await delay(1500);
+
+        // 4. Decide Winner
+        if (currentPlayerScore > currentOpponentScore) {
+          playGameOverSound('win');
           const nextLvl = currentLevelIndex + 1;
           const nextBest = Math.max(bestLevelReached, nextLvl + 1);
           setBestLevelReached(nextBest);
           localStorage.setItem('halfmoon_bestLevel', nextBest.toString());
           setGameState(prev => ({ ...prev, phase: 'levelWin' }));
         } else {
-          // Loss
+          playGameOverSound('lose');
           setGameState(prev => ({ ...prev, phase: 'gameOver' }));
         }
-      }, 2500);
-      return () => clearTimeout(timer);
+      };
+
+      renderCounting();
     }
   }, [isGameOver, gameState.phase, gameState.playerScore, gameState.opponentScore, currentLevelIndex, bestLevelReached]);
 
@@ -367,6 +512,14 @@ export default function Home() {
     setGameState(prev => ({ ...prev, phase: 'tutorial' }));
   };
 
+  const handleTutorialButton = () => {
+    if (gameState.phase === 'playing') {
+      setIsPaused(true);
+    } else {
+      openTutorial();
+    }
+  };
+
   const finishTutorial = () => {
     localStorage.setItem('halfmoon_hasSeenTutorial', 'true');
     setGameState(prev => ({ ...prev, phase: 'playing' }));
@@ -380,22 +533,46 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+
   useEffect(() => {
-    if (gameState.phase === 'playing' && gameState.currentTurn === 'opponent' && !isGameOver) {
-      setIsOpponentThinking(true);
-      const timer = setTimeout(() => {
+    if (gameState.phase === 'playing' && gameState.currentTurn === 'opponent' && !isGameOver && aiActionState.phase === 'idle') {
+      const executeAiTurn = async () => {
+        setAiActionState({ phase: 'thinking', cardId: null, targetNodeId: null });
+        await delay(800);
+
         const difficulty = currentLevelIndex > 2 ? 2 : currentLevelIndex;
         const move = aiTurn(gameState, difficulty);
-        if (move) {
-          handleNodeClick(move.nodeId, move.cardId, true);
-        } else {
+
+        if (!move) {
           setGameState(prev => ({ ...prev, currentTurn: 'player' }));
+          setAiActionState({ phase: 'idle', cardId: null, targetNodeId: null });
+          return;
         }
-        setIsOpponentThinking(false);
-      }, 1500);
-      return () => clearTimeout(timer);
+
+        setAiActionState({ phase: 'highlight', cardId: move.cardId, targetNodeId: move.nodeId });
+        await delay(600);
+
+        const targetEl = document.getElementById(`node-${move.nodeId}`);
+        const cardEl = document.getElementById(`ai-card-${move.cardId}`);
+        if (targetEl && cardEl) {
+          const targetRect = targetEl.getBoundingClientRect();
+          const cardRect = cardEl.getBoundingClientRect();
+          setAiPlayOffset({
+            x: targetRect.left - cardRect.left,
+            y: targetRect.top - cardRect.top,
+          });
+        }
+
+        setAiActionState({ phase: 'play', cardId: move.cardId, targetNodeId: move.nodeId });
+        await delay(500);
+
+        handleNodeClick(move.nodeId, move.cardId, true);
+        setAiActionState({ phase: 'idle', cardId: null, targetNodeId: null });
+      };
+      executeAiTurn();
     }
-  }, [gameState.phase, gameState.currentTurn, isGameOver, currentLevelIndex]);
+  }, [gameState.phase, gameState.currentTurn, isGameOver, aiActionState.phase, currentLevelIndex]);
 
   const isValidPlacement = (nodeId: string) => {
     const node = gameState.layout.nodes.find(n => n.id === nodeId);
@@ -420,7 +597,8 @@ export default function Home() {
     const newOwner = isAiTurn ? 'opponent' : 'player';
 
     const newNodes = gameState.layout.nodes.map(n =>
-      n.id === nodeId ? { ...n, card: { ...card, owner: newOwner as 'player' | 'opponent' } } : { ...n }
+      n.id === nodeId ? { ...n, card: { ...card, owner: newOwner as 'player' | 'opponent' } }
+        : { ...n, card: n.card ? { ...n.card } : null }
     );
 
     const events = evaluateGraphPlacement(newNodes, nodeId);
@@ -441,9 +619,19 @@ export default function Home() {
       if (event.type === 'CHAIN') {
         event.nodeIds.forEach((id: string) => {
           const targetNode = newNodes.find(n => n.id === id);
-          if (targetNode && targetNode.card) targetNode.card.owner = newOwner;
+          if (targetNode && targetNode.card) {
+            targetNode.card.owner = newOwner;
+            targetNode.card.scoredBy = event.owner;
+          }
         });
       }
+
+      event.nodeIds.forEach((id: string) => {
+        const targetNode = newNodes.find(n => n.id === id);
+        if (targetNode && targetNode.card) {
+          targetNode.card.scoredBy = event.owner;
+        }
+      });
     });
 
     const newHand = [...handToUse];
@@ -473,14 +661,31 @@ export default function Home() {
     // Sequence Animations
     if (chainEvents.length > 0) {
       let maxDelay = 0;
+      let totalChainPoints = 0;
+
       chainEvents.forEach((chainEv, evIndex) => {
         const cLength = chainEv.nodeIds.length;
-        chainEv.nodeIds.forEach((id, i) => {
+        totalChainPoints += chainEv.points;
+        const chainStartTime = evIndex * 2000;
+
+        if (chainEvents.length > 1) {
           setTimeout(() => {
-            playChainSound(i, cLength);
+            const popupId = `chain-label-${Date.now()}-${evIndex}`;
+            setChainPopups(prev => [...prev, { id: popupId, text: `CHAIN ${evIndex + 1} OF ${chainEvents.length}` }]);
+            setTimeout(() => {
+              setChainPopups(prev => prev.filter(p => p.id !== popupId));
+            }, 1500);
+          }, chainStartTime);
+        }
+
+        const startIndex = chainEv.nodeIds.indexOf(nodeId) !== -1 ? chainEv.nodeIds.indexOf(nodeId) : 0;
+
+        chainEv.nodeIds.forEach((id, i) => {
+          const distance = Math.abs(i - startIndex);
+          setTimeout(() => {
+            playChainSound(distance, cLength);
             setHighlightedNodes(prev => [...prev, { nodeId: id, type: 'CHAIN' }]);
 
-            // Add custom animation class manually to the card DOM node for the glow effect
             const cardEl = document.getElementById(`card-wrapper-${id}`);
             if (cardEl) {
               cardEl.style.animation = 'chainPulse 0.4s ease-out';
@@ -490,15 +695,15 @@ export default function Home() {
             if (i < cLength - 1) {
               setHighlightedEdges(prev => [...prev, { id1: id, id2: chainEv.nodeIds[i + 1], type: 'CHAIN' }]);
             }
-          }, i * 200 + evIndex * 1500);
+          }, distance * 250 + chainStartTime);
         });
 
-        const burstTime = cLength * 200 + 300 + evIndex * 1500;
+        const burstTime = Math.max(startIndex, cLength - 1 - startIndex) * 250 + 400 + chainStartTime;
         if (burstTime > maxDelay) maxDelay = burstTime;
 
         setTimeout(() => {
           playCompletionSound();
-          setScorePopups(prev => [...prev, { id: `popup-${Date.now()}-${evIndex}`, points: chainEv.points, type: 'CHAIN', nodeId: nodeId }]);
+          setScorePopups(prev => [...prev, { id: `popup-${Date.now()}-${evIndex}`, points: chainEv.points, type: 'CHAIN', nodeId: nodeId, owner: chainEv.owner }]);
         }, burstTime);
 
         setTimeout(() => {
@@ -507,6 +712,17 @@ export default function Home() {
           setScorePopups(prev => prev.filter(p => p.type !== 'CHAIN'));
         }, burstTime + 2000);
       });
+
+      if (chainEvents.length > 1) {
+        setTimeout(() => {
+          setMultipleChainsPopup({ count: chainEvents.length, points: totalChainPoints });
+          playMultipleChainSound();
+          setTimeout(() => {
+            setMultipleChainsPopup(null);
+          }, 3000);
+        }, maxDelay + 500);
+        maxDelay += 4000;
+      }
 
       // Apply delayed scores
       setTimeout(() => {
@@ -523,7 +739,7 @@ export default function Home() {
       otherEvents.forEach((event: ScoringEvent, i: number) => {
         event.nodeIds.forEach((id: string) => newHighlightNodes.push({ nodeId: id, type: event.type as HighlightType }));
         newHighlightEdges.push({ id1: event.nodeIds[0], id2: event.nodeIds[1], type: event.type as HighlightType });
-        newPopups.push({ id: `popup-${Date.now()}-${i}`, points: event.points, type: event.type as HighlightType, nodeId: nodeId });
+        newPopups.push({ id: `popup-${Date.now()}-${i}`, points: event.points, type: event.type as HighlightType, nodeId: nodeId, owner: event.owner });
       });
 
       setScorePopups(prev => [...prev, ...newPopups]);
@@ -664,10 +880,28 @@ export default function Home() {
             </div>
           </div>
           <div className="absolute right-0 flex gap-4">
-            <button onClick={openTutorial} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/30 text-indigo-200 hover:text-white hover:bg-black/60 transition-all shadow-xl flex items-center justify-center text-lg">❓</button>
+            <button onClick={handleTutorialButton} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/30 text-indigo-200 hover:text-white hover:bg-black/60 transition-all shadow-xl flex items-center justify-center text-lg">❓</button>
             <button onClick={toggleMute} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/30 text-indigo-200 hover:text-white hover:bg-black/60 transition-all shadow-xl flex items-center justify-center text-lg">{isMuted ? '🔇' : '🔊'}</button>
           </div>
         </div>
+
+        {isPaused && (
+          <GamePauseMenu
+            onResume={() => setIsPaused(false)}
+            onExit={() => {
+              if (confirm('Exit to menu? Current progress will be lost.')) {
+                setIsPaused(false);
+                setGameState(prev => ({ ...prev, phase: 'start' }));
+              }
+            }}
+            onOpenTutorial={() => {
+              setIsPaused(false);
+              setGameState(prev => ({ ...prev, phase: 'tutorial' }));
+            }}
+            currentLevel={`Level ${gameState.layout.levelNumber}: ${gameState.layout.name}`}
+            playerScore={gameState.playerScore}
+          />
+        )}
 
         {/* TOP: HALF MOON AREA */}
         <div className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-red-950/30 to-black/60 border border-red-500/20 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.05)] relative overflow-hidden">
@@ -675,7 +909,7 @@ export default function Home() {
             <div className="text-2xl font-black tracking-widest text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10">HALF MOON</div>
           </div>
 
-          {isOpponentThinking && (
+          {aiActionState.phase === 'thinking' && (
             <div className="absolute inset-0 flex items-center justify-center bg-red-950/40 backdrop-blur-sm z-0">
               <div className="text-red-300 font-mono tracking-[0.3em] flex items-center gap-2 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]">
                 THINKING
@@ -688,18 +922,35 @@ export default function Home() {
             </div>
           )}
 
-          <div className="flex flex-col items-end justify-center z-10 opacity-80" style={{ opacity: isOpponentThinking ? 0.2 : 0.8 }}>
+          <div className="flex flex-col items-end justify-center z-10 opacity-80" style={{ opacity: aiActionState.phase !== 'idle' ? 0.2 : 0.8 }}>
             <span className="text-2xl font-mono text-gray-200 font-bold">{gameState.opponentScore} PTS</span>
           </div>
         </div>
 
         {/* AI Face-down Cards */}
-        <div className="flex gap-6 justify-center z-20">
-          {gameState.opponentHand.map(card => (
-            <div key={card.id} className="pointer-events-none transform shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
-              <MoonCard card={card} isFaceDown={true} />
-            </div>
-          ))}
+        <div className="flex gap-6 justify-center z-20 h-[100px] items-center">
+          {gameState.opponentHand.map(card => {
+            const isActing = aiActionState.cardId === card.id;
+            const aiCardPlayVariants = {
+              initial: { scale: 1, y: 0, x: 0 },
+              highlight: { scale: 1.1, boxShadow: '0 0 20px rgba(255, 80, 100, 0.6)', transition: { duration: 0.3 } },
+              play: { scale: 1.0, x: aiPlayOffset.x, y: aiPlayOffset.y, transition: { duration: 0.5, ease: "easeInOut" as const } }
+            };
+
+            return (
+              <motion.div
+                id={`ai-card-${card.id}`}
+                key={card.id}
+                className="transform shadow-[0_10px_20px_rgba(0,0,0,0.5)] rounded-[8px] pointer-events-none"
+                style={{ zIndex: isActing ? 50 : 20 }}
+                variants={aiCardPlayVariants}
+                initial="initial"
+                animate={isActing && aiActionState.phase === 'highlight' ? 'highlight' : isActing && aiActionState.phase === 'play' ? ['highlight', 'play'] : 'initial'}
+              >
+                <MoonCard card={card} isFaceDown={true} />
+              </motion.div>
+            );
+          })}
         </div>
       </div>
 
@@ -715,10 +966,21 @@ export default function Home() {
           else if (popup.type === 'FULL_MOON') textColor = 'text-yellow-300 drop-shadow-[0_4px_4px_rgba(253,224,71,0.8)]';
           else if (popup.type === 'PAIR') textColor = 'text-blue-300 drop-shadow-[0_4px_4px_rgba(59,130,246,0.8)]';
 
+          const xDir = popup.owner === 'player' ? -50 : 50;
+          const yDir = popup.owner === 'player' ? 300 : -300;
+
           return (
-            <div
+            <motion.div
               key={popup.id}
-              className="absolute z-50 animate-bounce pointer-events-none drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+              initial={{ opacity: 0, scale: 0.5, y: 0, x: 0 }}
+              animate={{
+                opacity: [0, 1, 1, 0],
+                scale: [0.5, 1.2, 1, 0.5],
+                y: [0, -20, yDir],
+                x: [0, 0, xDir]
+              }}
+              transition={{ duration: 2.0, times: [0, 0.2, 0.7, 1], ease: "easeInOut" }}
+              className="absolute z-50 pointer-events-none drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
               style={{
                 left: `calc(${targetNode.position.x}% - 20px)`,
                 top: `calc(${targetNode.position.y}% - 60px)`
@@ -730,9 +992,23 @@ export default function Home() {
               <div className={`text-xs font-bold text-center uppercase mt-1 ${textColor}`}>
                 {popup.type.replace('_', ' ')}
               </div>
-            </div>
+            </motion.div>
           )
         })}
+
+        {chainPopups.map((popup) => (
+          <div key={popup.id} className="fixed top-[40%] left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-600/90 text-white border border-indigo-400 px-6 py-3 rounded-xl font-bold text-lg tracking-widest z-[999] shadow-[0_0_20px_rgba(99,102,241,0.6)] animate-in fade-in zoom-in slide-in-from-bottom-8 duration-300 pointer-events-none uppercase">
+            {popup.text}
+          </div>
+        ))}
+
+        {multipleChainsPopup && (
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-yellow-400 to-yellow-600 p-8 rounded-3xl text-center z-[1001] shadow-[0_10px_80px_rgba(253,224,71,0.6)] border-[4px] border-yellow-200 animate-in zoom-in-75 fade-in duration-300 pointer-events-none">
+            <div className="text-3xl font-black mb-2 uppercase drop-shadow-[0_4px_4px_rgba(0,0,0,0.3)] text-indigo-950">MULTIPLE CHAINS! 🎉</div>
+            <div className="text-xl mb-3 font-bold text-indigo-900 tracking-wide">{multipleChainsPopup.count} chains found</div>
+            <div className="text-6xl font-black drop-shadow-[0_4px_4px_rgba(255,255,255,0.4)] text-white mt-4 tracking-tighter">+{multipleChainsPopup.points} PTS</div>
+          </div>
+        )}
 
         {/* Game Board Container */}
         <div className={`w-full max-w-4xl h-[550px] rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95
