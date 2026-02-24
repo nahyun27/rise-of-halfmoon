@@ -8,9 +8,9 @@ interface TutorialOverlayProps {
 
 function TutorialCard({ phase, owner = 'player', isFaceDown = false }: { phase: number, owner?: 'player' | 'opponent', isFaceDown?: boolean }) {
   const emojis = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
-  
+
   return (
-    <div 
+    <div
       className="tutorial-card transition-transform hover:-translate-y-2 relative"
       style={{
         width: '80px',
@@ -29,7 +29,7 @@ function TutorialCard({ phase, owner = 'player', isFaceDown = false }: { phase: 
         {isFaceDown ? '🌙' : emojis[phase]}
       </span>
       {!isFaceDown && (
-         <div className="absolute bottom-2 h-1 w-6 rounded-full bg-white/10 transition-colors duration-300"></div>
+        <div className="absolute bottom-2 h-1 w-6 rounded-full bg-white/10 transition-colors duration-300"></div>
       )}
     </div>
   );
@@ -57,13 +57,13 @@ const DemoPlacement = () => (
       <div className="flex items-center gap-6 relative">
         <div className="absolute top-1/2 left-[40px] right-[40px] h-0.5 bg-indigo-500/50 -z-10" />
         <div className="flex flex-col items-center gap-3 relative">
-           <TutorialCard phase={1} />
-           <span className="text-sm font-mono font-bold tracking-widest text-indigo-300">BOARD</span>
-           <div className="absolute -inset-3 rounded-xl border-2 border-green-400 bg-green-500/10 shadow-[0_0_20px_rgba(74,222,128,0.4)] animate-pulse -z-10"></div>
+          <TutorialCard phase={1} />
+          <span className="text-sm font-mono font-bold tracking-widest text-indigo-300">BOARD</span>
+          <div className="absolute -inset-3 rounded-xl border-2 border-green-400 bg-green-500/10 shadow-[0_0_20px_rgba(74,222,128,0.4)] animate-pulse -z-10"></div>
         </div>
         <div className="flex flex-col items-center gap-3">
-           <EmptySlot />
-           <span className="text-sm font-mono font-bold tracking-widest opacity-0">EMPTY</span>
+          <EmptySlot />
+          <span className="text-sm font-mono font-bold tracking-widest opacity-0">EMPTY</span>
         </div>
       </div>
     </div>
@@ -96,7 +96,7 @@ const DemoFullMoon = () => (
       +2 Full Moon!
     </div>
     <div className="text-sm font-mono text-indigo-200/60 tracking-widest bg-indigo-950/40 px-6 py-2 rounded-xl mt-2 border border-indigo-500/20">
-       🌑+🌕 | 🌒+🌖 | 🌓+🌗 | 🌔+🌘
+      🌑+🌕 | 🌒+🌖 | 🌓+🌗 | 🌔+🌘
     </div>
   </div>
 );
@@ -121,7 +121,7 @@ const DemoSteal = () => (
     <div className="flex items-center gap-6 relative">
       <div className="absolute top-1/2 left-[40px] right-[100px] h-1 bg-indigo-500/50 -z-10" />
       <div className="absolute top-1/2 left-[250px] right-[40px] h-1 bg-red-500 -z-10" />
-      
+
       <div className="relative">
         <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-red-400 font-bold tracking-widest w-[80px] text-center bg-red-950/90 px-2 py-1 rounded border border-red-500/50 whitespace-nowrap z-30">STOLEN</div>
         <TutorialCard phase={0} owner="opponent" />
@@ -178,7 +178,7 @@ const tutorialSteps = [
           Target: Score more points than your opponent by placing moon phase cards strategically on the star map.
         </p>
         <p className="text-lg text-indigo-100/80 leading-relaxed tracking-wide">
-          The first card can be placed <strong className="text-indigo-200">anywhere</strong>. Subsequent cards <strong className="text-indigo-200">must connect</strong> to a previously placed card via the dotted lines!
+          Place cards <strong className="text-indigo-200">anywhere</strong> on the star map!
         </p>
       </div>
     ),

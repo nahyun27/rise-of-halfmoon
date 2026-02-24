@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MoonCard } from "../components/MoonCard";
 import { MoonCard as MoonCardType, GameState, BoardNode, GamePhase } from "../types/game";
 import { evaluateGraphPlacement, ScoringEvent } from "../utils/scoring";
+import { DndContext, useDraggable, useDroppable, DragEndEvent } from '@dnd-kit/core';
 import { aiTurn } from "../utils/ai";
 import { LEVEL_LAYOUTS } from "../constants/layouts";
 import { TutorialOverlay } from "../components/TutorialOverlay";
@@ -47,10 +48,126 @@ const generateDeck = (size: number, owner: 'player' | 'opponent'): MoonCardType[
 
 const INITIAL_DECK_SIZE = 30; // 3 in hand, 27 in draw pile.
 
+function useBackgroundMusic() {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+
+  useEffect(() => {
+    const savedMute = localStorage.getItem('halfmoon_isMuted') === 'true';
+    setIsMuted(savedMute);
+
+    audioRef.current = new Audio('/bgm.mp3');
+    audioRef.current.loop = true;
+    audioRef.current.volume = 0.3;
+    audioRef.current.muted = savedMute;
+
+    const playAudio = () => {
+      audioRef.current?.play().catch(() => { });
+      document.removeEventListener('click', playAudio);
+      document.removeEventListener('keydown', playAudio);
+    };
+
+    document.addEventListener('click', playAudio);
+    document.addEventListener('keydown', playAudio);
+
+    return () => {
+      audioRef.current?.pause();
+      document.removeEventListener('click', playAudio);
+      document.removeEventListener('keydown', playAudio);
+    };
+  }, []);
+
+  const toggleMute = () => {
+    setIsMuted(prev => {
+      const next = !prev;
+      localStorage.setItem('halfmoon_isMuted', String(next));
+      if (audioRef.current) audioRef.current.muted = next;
+      return next;
+    });
+  };
+
+  return { isMuted, toggleMute };
+}
+
+function GameControls({ onTutorial, isMuted, onToggleMute }: { onTutorial: () => void, isMuted: boolean, onToggleMute: () => void }) {
+  return (
+    <div className="fixed top-6 right-6 flex gap-4 z-50">
+      <button
+        onClick={onTutorial}
+        className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/30 text-indigo-200 hover:text-white hover:bg-black/60 transition-all shadow-xl flex items-center justify-center text-xl"
+        title="How to Play"
+      >
+        ❓
+      </button>
+      <button
+        onClick={onToggleMute}
+        className="w-12 h-12 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/30 text-indigo-200 hover:text-white hover:bg-black/60 transition-all shadow-xl flex items-center justify-center text-xl"
+        title={isMuted ? 'Unmute' : 'Mute'}
+      >
+        {isMuted ? '🔇' : '🔊'}
+      </button>
+    </div>
+  );
+}
+
+function DraggableCard({ card, isSelected, onClick, disabled }: { card: MoonCardType, isSelected: boolean, onClick: () => void, disabled: boolean }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `card-${card.id}`,
+    data: { card },
+    disabled
+  });
+
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    zIndex: isDragging ? 100 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={`transform transition-all duration-300 cursor-grab active:cursor-grabbing touch-none
+          ${isSelected && !isDragging ? '-translate-y-6 scale-110 shadow-[0_10px_20px_rgba(0,0,0,0.5)]' : !isDragging ? 'hover:-translate-y-2 hover:scale-105 shadow-[0_10px_20px_rgba(0,0,0,0.5)]' : ''}
+          ${isDragging ? 'scale-110 shadow-[0_20px_40px_rgba(0,0,0,0.8)] z-50 cursor-grabbing opacity-90' : ''}`}
+    >
+      <MoonCard card={card} onClick={onClick} />
+    </div>
+  );
+}
+
+function DroppableNode({ node, children, isValid, isHovered }: { node: BoardNode, children: React.ReactNode, isValid: boolean, isHovered: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `node-${node.id}`,
+    data: { node },
+    disabled: node.card !== null || !isValid
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`
+         absolute transform -translate-x-1/2 -translate-y-1/2 w-[80px] h-[100px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
+         ${isOver && isValid ? 'scale-110' : ''}
+         ${node.card ? 'cursor-default' : isValid ? 'cursor-pointer' : 'cursor-default opacity-80'}
+       `}
+      style={{
+        left: `${node.position.x}%`,
+        top: `${node.position.y}%`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export default function Home() {
   const [hasMounted, setHasMounted] = useState(false);
   const [bestLevelReached, setBestLevelReached] = useState(1);
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+
+  const { isMuted, toggleMute } = useBackgroundMusic();
 
   const [gameState, setGameState] = useState<GameState>({
     phase: 'start',
@@ -204,13 +321,17 @@ export default function Home() {
   const isValidPlacement = (nodeId: string) => {
     const node = gameState.layout.nodes.find(n => n.id === nodeId);
     if (!node || node.card !== null) return false;
-    if (isBoardEmpty) return true;
+    return true; // Any empty node is valid in the new rules
+  };
 
-    for (const neighborId of node.connectedTo) {
-      const neighbor = gameState.layout.nodes.find(n => n.id === neighborId);
-      if (neighbor && neighbor.card !== null) return true;
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.data.current?.card && over.data.current?.node) {
+      const cardId = active.data.current.card.id;
+      const nodeId = over.data.current.node.id;
+      // We need to bypass the "selectedCardId" check for drag and drop by passing it directly
+      handleNodeClick(nodeId, cardId, false);
     }
-    return false;
   };
 
   const handleNodeClick = (nodeId: string, overrideCardId?: string, isAiTurn: boolean = false) => {
@@ -424,219 +545,206 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-between py-8 px-8 bg-[#0a0a1a] text-white font-sans selection:bg-indigo-500/30">
 
+      <GameControls onTutorial={openTutorial} isMuted={isMuted} onToggleMute={toggleMute} />
+
       {gameState.phase === 'tutorial' && (
         <TutorialOverlay onClose={finishTutorial} />
       )}
 
-      {/* TOP: OPPONENT AREA */}
-      <div className="w-full max-w-5xl flex flex-col items-center gap-6">
-        <div className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-red-950/30 to-black/60 border border-red-500/20 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.05)] relative overflow-hidden">
-          <div className="flex flex-col">
-            <div className="text-2xl font-black tracking-widest text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10">OPPONENT</div>
-            <div className="text-sm font-bold tracking-widest text-red-500/50 uppercase mt-1">Level {gameState.layout.levelNumber}: {gameState.layout.name}</div>
+      {/* DND CONTEXT FOR PLAYING PHASE */}
+      <DndContext onDragEnd={handleDragEnd}>
+        {/* TOP: OPPONENT AREA */}
+        <div className="w-full max-w-5xl flex flex-col items-center gap-6">
+          <div className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-red-950/30 to-black/60 border border-red-500/20 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.05)] relative overflow-hidden">
+            <div className="flex flex-col">
+              <div className="text-2xl font-black tracking-widest text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10">OPPONENT</div>
+              <div className="text-sm font-bold tracking-widest text-red-500/50 uppercase mt-1">Level {gameState.layout.levelNumber}: {gameState.layout.name}</div>
+            </div>
+
+            {isOpponentThinking && (
+              <div className="absolute inset-0 flex items-center justify-center bg-red-950/40 backdrop-blur-sm z-0">
+                <div className="text-red-300 font-mono tracking-[0.3em] flex items-center gap-2 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]">
+                  THINKING
+                  <span className="flex gap-1 ml-2">
+                    <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
+                    <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
+                    <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col items-end justify-center z-10 opacity-80" style={{ opacity: isOpponentThinking ? 0.2 : 0.8 }}>
+              <span className="text-2xl font-mono text-gray-200 font-bold">{gameState.opponentScore} PTS</span>
+            </div>
           </div>
 
-          {isOpponentThinking && (
-            <div className="absolute inset-0 flex items-center justify-center bg-red-950/40 backdrop-blur-sm z-0">
-              <div className="text-red-300 font-mono tracking-[0.3em] flex items-center gap-2 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]">
-                THINKING
-                <span className="flex gap-1 ml-2">
-                  <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
-                  <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
-                  <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
-                </span>
+          {/* AI Face-down Cards */}
+          <div className="flex gap-6 justify-center z-20">
+            {gameState.opponentHand.map(card => (
+              <div key={card.id} className="pointer-events-none transform shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
+                <MoonCard card={card} isFaceDown={true} />
               </div>
-            </div>
-          )}
-
-          <div className="flex flex-col items-end justify-center z-10 opacity-80" style={{ opacity: isOpponentThinking ? 0.2 : 0.8 }}>
-            <span className="text-2xl font-mono text-gray-200 font-bold">{gameState.opponentScore} PTS</span>
+            ))}
           </div>
         </div>
 
-        {/* AI Face-down Cards */}
-        <div className="flex gap-6 justify-center z-20">
-          {gameState.opponentHand.map(card => (
-            <div key={card.id} className="pointer-events-none transform shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
-              <MoonCard card={card} isFaceDown={true} />
-            </div>
-          ))}
-        </div>
-      </div>
+        {/* MIDDLE: GRAPH BOARD */}
+        <div className="flex flex-col items-center gap-4 w-full max-w-5xl relative flex-grow justify-center my-4">
+          {/* Score Popups overlay */}
+          {scorePopups.map((popup) => {
+            const targetNode = gameState.layout.nodes.find(n => n.id === popup.nodeId);
+            if (!targetNode) return null;
 
-      {/* MIDDLE: GRAPH BOARD */}
-      <div className="flex flex-col items-center gap-4 w-full max-w-5xl relative flex-grow justify-center my-4">
-        {/* Score Popups overlay */}
-        {scorePopups.map((popup) => {
-          const targetNode = gameState.layout.nodes.find(n => n.id === popup.nodeId);
-          if (!targetNode) return null;
+            let textColor = 'text-white';
+            if (popup.type === 'CHAIN') textColor = 'text-purple-300 drop-shadow-[0_4px_4px_rgba(168,85,247,0.8)]';
+            else if (popup.type === 'FULL_MOON') textColor = 'text-yellow-300 drop-shadow-[0_4px_4px_rgba(253,224,71,0.8)]';
+            else if (popup.type === 'PAIR') textColor = 'text-blue-300 drop-shadow-[0_4px_4px_rgba(59,130,246,0.8)]';
 
-          let textColor = 'text-white';
-          if (popup.type === 'CHAIN') textColor = 'text-purple-300 drop-shadow-[0_4px_4px_rgba(168,85,247,0.8)]';
-          else if (popup.type === 'FULL_MOON') textColor = 'text-yellow-300 drop-shadow-[0_4px_4px_rgba(253,224,71,0.8)]';
-          else if (popup.type === 'PAIR') textColor = 'text-blue-300 drop-shadow-[0_4px_4px_rgba(59,130,246,0.8)]';
-
-          return (
-            <div
-              key={popup.id}
-              className="absolute z-50 animate-bounce pointer-events-none drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
-              style={{
-                left: `calc(${targetNode.position.x}% - 20px)`,
-                top: `calc(${targetNode.position.y}% - 60px)`
-              }}
-            >
-              <div className={`text-3xl font-black ${textColor} drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]`}>
-                +{popup.points}
+            return (
+              <div
+                key={popup.id}
+                className="absolute z-50 animate-bounce pointer-events-none drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+                style={{
+                  left: `calc(${targetNode.position.x}% - 20px)`,
+                  top: `calc(${targetNode.position.y}% - 60px)`
+                }}
+              >
+                <div className={`text-3xl font-black ${textColor} drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]`}>
+                  +{popup.points}
+                </div>
+                <div className={`text-xs font-bold text-center uppercase mt-1 ${textColor}`}>
+                  {popup.type.replace('_', ' ')}
+                </div>
               </div>
-              <div className={`text-xs font-bold text-center uppercase mt-1 ${textColor}`}>
-                {popup.type.replace('_', ' ')}
-              </div>
-            </div>
-          )
-        })}
+            )
+          })}
 
-        {/* Game Board Container */}
-        <div className={`w-full max-w-4xl h-[550px] rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95
+          {/* Game Board Container */}
+          <div className={`w-full max-w-4xl h-[550px] rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95
            ${THEME_STYLES[gameState.layout.theme || 'indigo'].bg} 
            ${THEME_STYLES[gameState.layout.theme || 'indigo'].border} 
            ${THEME_STYLES[gameState.layout.theme || 'indigo'].shadow}
         `}>
 
-          {/* SVG Connections Container */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ filter: 'drop-shadow(0 0 8px rgba(99,102,241,0.3))' }}>
-            {Array.from(connections).map(pair => {
-              const [id1, id2] = pair.split('-');
-              const n1 = gameState.layout.nodes.find(n => n.id === id1);
-              const n2 = gameState.layout.nodes.find(n => n.id === id2);
-              if (!n1 || !n2) return null;
+            {/* SVG Connections Container */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ filter: 'drop-shadow(0 0 8px rgba(99,102,241,0.3))' }}>
+              {Array.from(connections).map(pair => {
+                const [id1, id2] = pair.split('-');
+                const n1 = gameState.layout.nodes.find(n => n.id === id1);
+                const n2 = gameState.layout.nodes.find(n => n.id === id2);
+                if (!n1 || !n2) return null;
 
-              const isHighlighted = highlightedEdges.find(e => (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1));
-              const highlightEdge = highlightedEdges.find(e => (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1));
+                const isHighlighted = highlightedEdges.find(e => (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1));
+                const highlightEdge = highlightedEdges.find(e => (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1));
 
-              const isOccupied = n1.card !== null && n2.card !== null;
+                const isOccupied = n1.card !== null && n2.card !== null;
+                const themeStyle = THEME_STYLES[gameState.layout.theme || 'indigo'];
+
+                let lineClass = isOccupied ? `${themeStyle.lineActive} stroke-[3]` : `${themeStyle.lineInactive} stroke-[2] stroke-dasharray-[4,4]`;
+
+                if (isHighlighted && highlightEdge) {
+                  if (highlightEdge.type === 'CHAIN') lineClass = 'stroke-purple-400 stroke-[6] drop-shadow-[0_0_10px_rgba(168,85,247,0.8)] animate-pulse';
+                  else if (highlightEdge.type === 'FULL_MOON') lineClass = 'stroke-yellow-400 stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
+                  else if (highlightEdge.type === 'PAIR') lineClass = 'stroke-blue-400 stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
+                }
+
+                return (
+                  <line
+                    key={pair}
+                    x1={`${n1.position.x}%`}
+                    y1={`${n1.position.y}%`}
+                    x2={`${n2.position.x}%`}
+                    y2={`${n2.position.y}%`}
+                    className={`transition-all duration-1000 ${lineClass}`}
+                  />
+                );
+              })}
+            </svg>
+
+            {/* Node Render Loop */}
+            {gameState.layout.nodes.map(node => {
+              const isValid = selectedCardId ? isValidPlacement(node.id) : false;
+              const isHovered = hoveredNodeId === node.id;
+
+              const nodeHighlights = highlightedNodes.filter(hn => hn.nodeId === node.id).map(hn => hn.type);
+              const isChain = nodeHighlights.includes('CHAIN');
+              const isFullMoon = nodeHighlights.includes('FULL_MOON');
+              const isPair = nodeHighlights.includes('PAIR');
+
+              let ringColor = '';
+              if (isChain) ringColor = 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.8)]';
+              else if (isFullMoon) ringColor = 'border-yellow-300 shadow-[0_0_30px_rgba(253,224,71,1)]';
+              else if (isPair) ringColor = 'border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.8)]';
+
               const themeStyle = THEME_STYLES[gameState.layout.theme || 'indigo'];
 
-              let lineClass = isOccupied ? `${themeStyle.lineActive} stroke-[3]` : `${themeStyle.lineInactive} stroke-[2] stroke-dasharray-[4,4]`;
-
-              if (isHighlighted && highlightEdge) {
-                if (highlightEdge.type === 'CHAIN') lineClass = 'stroke-purple-400 stroke-[6] drop-shadow-[0_0_10px_rgba(168,85,247,0.8)] animate-pulse';
-                else if (highlightEdge.type === 'FULL_MOON') lineClass = 'stroke-yellow-400 stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
-                else if (highlightEdge.type === 'PAIR') lineClass = 'stroke-blue-400 stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
-              }
-
               return (
-                <line
-                  key={pair}
-                  x1={`${n1.position.x}%`}
-                  y1={`${n1.position.y}%`}
-                  x2={`${n2.position.x}%`}
-                  y2={`${n2.position.y}%`}
-                  className={`transition-all duration-1000 ${lineClass}`}
-                />
+                <DroppableNode key={node.id} node={node} isValid={isValid} isHovered={isHovered}>
+                  {!node.card && (
+                    <div className={`
+                       absolute inset-0 rounded-[8px] border-2 transition-all duration-300
+                       ${isValid && isHovered ? 'border-green-300 bg-green-400/20 scale-105 border-solid' : isValid ? 'border-green-400 bg-green-500/10 shadow-[0_0_30px_rgba(74,222,128,0.5)] animate-pulse border-solid' : `${themeStyle.nodeBorder} bg-[#141428] border-dashed`}
+                     `}>
+                      <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${themeStyle.nodeDot}`}></div>
+                    </div>
+                  )}
+
+                  {node.card && (
+                    <div className={`absolute inset-0 w-full h-full animate-in zoom-in spin-in-1`}>
+                      <MoonCard card={node.card} />
+                    </div>
+                  )}
+
+                  {isHovered && isValid && selectedCardId && !node.card && (
+                    <div className="absolute inset-0 w-full h-full opacity-40 scale-90 pointer-events-none z-0">
+                      <MoonCard card={gameState.playerHand.find(c => c.id === selectedCardId)!} />
+                    </div>
+                  )}
+
+                  {ringColor && (
+                    <div className={`absolute -inset-2 rounded-2xl border-4 pointer-events-none animate-in zoom-in spin-in-2 ${ringColor} z-20`}></div>
+                  )}
+                </DroppableNode>
               );
             })}
-          </svg>
-
-          {/* Node Render Loop */}
-          {gameState.layout.nodes.map(node => {
-            const isValid = selectedCardId ? isValidPlacement(node.id) : false;
-            const isHovered = hoveredNodeId === node.id;
-
-            const nodeHighlights = highlightedNodes.filter(hn => hn.nodeId === node.id).map(hn => hn.type);
-            const isChain = nodeHighlights.includes('CHAIN');
-            const isFullMoon = nodeHighlights.includes('FULL_MOON');
-            const isPair = nodeHighlights.includes('PAIR');
-
-            let ringColor = '';
-            if (isChain) ringColor = 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.8)]';
-            else if (isFullMoon) ringColor = 'border-yellow-300 shadow-[0_0_30px_rgba(253,224,71,1)]';
-            else if (isPair) ringColor = 'border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.8)]';
-
-            const themeStyle = THEME_STYLES[gameState.layout.theme || 'indigo'];
-
-            return (
-              <div
-                key={node.id}
-                onClick={() => handleNodeClick(node.id)}
-                onMouseEnter={() => setHoveredNodeId(node.id)}
-                onMouseLeave={() => setHoveredNodeId(null)}
-                className={`
-                   absolute transform -translate-x-1/2 -translate-y-1/2 w-[80px] h-[100px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
-                   ${node.card ? 'cursor-default' : isValid && selectedCardId ? 'cursor-pointer' : selectedCardId ? 'cursor-not-allowed opacity-50 saturate-0' : 'cursor-default opacity-80'}
-                 `}
-                style={{
-                  left: `${node.position.x}%`,
-                  top: `${node.position.y}%`,
-                }}
-              >
-                {!node.card && (
-                  <div className={`
-                       absolute inset-0 rounded-[8px] border-2 transition-all duration-300
-                       ${isValid && selectedCardId ? 'border-green-400 bg-green-500/10 shadow-[0_0_30px_rgba(74,222,128,0.5)] animate-pulse border-solid' : `${themeStyle.nodeBorder} bg-[#141428] border-dashed`}
-                       ${!isValid && selectedCardId ? 'border-red-500/20 bg-red-900/10' : ''}
-                       ${isHovered && isValid && selectedCardId ? 'border-green-300 bg-green-400/20 scale-105 border-solid' : ''}
-                     `}>
-                    <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${themeStyle.nodeDot}`}></div>
-                  </div>
-                )}
-
-                {node.card && (
-                  <div className={`absolute inset-0 w-full h-full animate-in zoom-in spin-in-1`}>
-                    <MoonCard card={node.card} />
-                  </div>
-                )}
-
-                {isHovered && isValid && selectedCardId && !node.card && (
-                  <div className="absolute inset-0 w-full h-full opacity-40 scale-90 pointer-events-none">
-                    <MoonCard card={gameState.playerHand.find(c => c.id === selectedCardId)!} />
-                  </div>
-                )}
-
-                {ringColor && (
-                  <div className={`absolute -inset-2 rounded-2xl border-4 pointer-events-none animate-in zoom-in spin-in-2 ${ringColor} z-20`}></div>
-                )}
-
-              </div>
-            );
-          })}
+          </div>
         </div>
-      </div>
 
-      {/* BOTTOM: PLAYER AREA */}
-      <div className="w-full max-w-5xl flex flex-col items-center gap-6">
+        {/* BOTTOM: PLAYER AREA */}
+        <div className="w-full max-w-5xl flex flex-col items-center gap-6">
 
-        {/* Player Hand */}
-        <div className="flex gap-6 justify-center z-20">
-          {gameState.playerHand.map((card, index) => {
-            const isSelected = selectedCardId === card.id;
-            return (
-              <div
-                key={card.id}
-                className={`transform transition-all duration-300 shadow-[0_10px_20px_rgba(0,0,0,0.5)] ${isSelected ? '-translate-y-6 scale-110' : 'hover:-translate-y-2 hover:scale-105'}`}
-              >
-                <MoonCard
+          {/* Player Hand */}
+          <div className="flex gap-6 justify-center z-20">
+            {gameState.playerHand.map((card, index) => {
+              const isSelected = selectedCardId === card.id;
+              return (
+                <DraggableCard
+                  key={card.id}
                   card={card}
+                  isSelected={isSelected}
                   onClick={() => {
                     if (gameState.currentTurn === 'player') {
                       setSelectedCardId(isSelected ? null : card.id);
                     }
                   }}
+                  disabled={gameState.currentTurn !== 'player'}
                 />
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
 
-        <div className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-blue-950/30 to-black/60 border border-indigo-500/20 rounded-2xl shadow-[0_0_20px_rgba(99,102,241,0.05)] relative overflow-hidden">
-          <div className="flex flex-col">
-            <div className="text-2xl font-black tracking-widest text-indigo-400 drop-shadow-[0_0_8px_rgba(165,180,252,0.5)] z-10">YOU</div>
-            <div className="text-sm font-bold tracking-widest text-indigo-500/50 uppercase mt-1">Deck: {gameState.playerDrawPile.length} Cards Left</div>
-          </div>
-          <div className="flex flex-col items-end justify-center z-10">
-            <span className="text-2xl font-mono text-gray-200 font-bold">{gameState.playerScore} PTS</span>
+          <div className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-blue-950/30 to-black/60 border border-indigo-500/20 rounded-2xl shadow-[0_0_20px_rgba(99,102,241,0.05)] relative overflow-hidden">
+            <div className="flex flex-col">
+              <div className="text-2xl font-black tracking-widest text-indigo-400 drop-shadow-[0_0_8px_rgba(165,180,252,0.5)] z-10">YOU</div>
+              <div className="text-sm font-bold tracking-widest text-indigo-500/50 uppercase mt-1">Deck: {gameState.playerDrawPile.length} Cards Left</div>
+            </div>
+            <div className="flex flex-col items-end justify-center z-10">
+              <span className="text-2xl font-mono text-gray-200 font-bold">{gameState.playerScore} PTS</span>
+            </div>
           </div>
         </div>
-      </div>
+      </DndContext>
     </div>
   );
 }
