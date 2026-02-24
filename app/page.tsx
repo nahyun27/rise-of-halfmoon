@@ -362,7 +362,7 @@ function DroppableNode({ node, children, isValid, isHovered, onClick, onDrop, on
       onDragLeave={onDragLeave}
       onDrop={handleDrop}
       className={`
-         absolute transform -translate-x-1/2 -translate-y-1/2 w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] md:w-[80px] md:h-[80px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
+         absolute transform -translate-x-1/2 -translate-y-1/2 w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] md:w-[72px] md:h-[72px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
          ${isHovered && isValid ? 'scale-110' : ''}
          ${node.card ? 'cursor-default' : isValid ? 'cursor-pointer' : 'cursor-default opacity-80'}
        `}
@@ -1040,7 +1040,7 @@ export default function Home() {
         </div>
 
         {/* AI Face-down Cards */}
-        <div className="flex gap-2 sm:gap-4 md:gap-6 justify-center z-20 h-[60px] sm:h-[60px] md:h-[80px] items-center">
+        <div className="flex gap-2 sm:gap-4 md:gap-6 justify-center z-20 h-[60px] sm:h-[60px] md:h-[72px] items-center">
           {gameState.opponentHand.map(card => {
             const isActing = aiActionState.cardId === card.id;
             const aiCardPlayVariants = {
