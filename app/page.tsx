@@ -345,7 +345,7 @@ function DroppableNode({ node, children, isValid, isHovered, onClick, onDrop, on
       onDragLeave={onDragLeave}
       onDrop={handleDrop}
       className={`
-         absolute transform -translate-x-1/2 -translate-y-1/2 w-[40px] h-[50px] sm:w-[60px] sm:h-[75px] md:w-[80px] md:h-[100px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
+         absolute transform -translate-x-1/2 -translate-y-1/2 w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] md:w-[80px] md:h-[80px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
          ${isHovered && isValid ? 'scale-110' : ''}
          ${node.card ? 'cursor-default' : isValid ? 'cursor-pointer' : 'cursor-default opacity-80'}
        `}
@@ -907,7 +907,7 @@ export default function Home() {
       )}
 
       {/* TOP: LAYOUT WRAPPER */}
-      <div className="w-full max-w-5xl flex flex-col items-center gap-4 sm:gap-6">
+      <div className="w-full max-w-5xl flex flex-col items-center gap-2 sm:gap-4 md:gap-6 h-[18vh] sm:h-[20vh] z-30">
 
         {/* HEADER: Level & Controls */}
         <div className="w-full flex items-center relative py-2 mb-2">
@@ -965,7 +965,7 @@ export default function Home() {
         </div>
 
         {/* AI Face-down Cards */}
-        <div className="flex gap-2 sm:gap-4 md:gap-6 justify-center z-20 h-[50px] sm:h-[75px] md:h-[100px] items-center">
+        <div className="flex gap-3 sm:gap-4 md:gap-6 justify-center z-20 h-[60px] sm:h-[70px] md:h-[80px] items-center">
           {gameState.opponentHand.map(card => {
             const isActing = aiActionState.cardId === card.id;
             const aiCardPlayVariants = {
@@ -992,7 +992,7 @@ export default function Home() {
       </div>
 
       {/* MIDDLE: GRAPH BOARD */}
-      <div className="flex flex-col items-center gap-4 w-full max-w-5xl relative flex-grow justify-center my-4">
+      <div className="flex flex-col items-center gap-4 w-full max-w-5xl relative flex-grow min-h-0 justify-center my-2 sm:my-4 z-10">
         {/* Score Popups overlay */}
         {scorePopups.map((popup) => {
           const targetNode = gameState.layout.nodes.find(n => n.id === popup.nodeId);
@@ -1048,7 +1048,7 @@ export default function Home() {
         )}
 
         {/* Game Board Container */}
-        <div className={`w-full max-w-4xl h-[450px] sm:h-[450px] md:h-[550px] rounded-2xl md:rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95
+        <div className={`w-full max-w-4xl h-[450px] sm:h-[450px] md:h-[550px] rounded-2xl md:rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95 scale-90 sm:scale-95 md:scale-100 my-auto flex items-center justify-center
            ${THEME_STYLES[gameState.layout.theme || 'indigo'].bg} 
            ${THEME_STYLES[gameState.layout.theme || 'indigo'].border} 
            ${THEME_STYLES[gameState.layout.theme || 'indigo'].shadow}
@@ -1218,10 +1218,10 @@ export default function Home() {
       </div>
 
       {/* BOTTOM: PLAYER AREA */}
-      <div className="w-full max-w-5xl flex flex-col items-center gap-4 sm:gap-6">
+      <div className="w-full max-w-5xl flex flex-col items-center justify-end gap-2 sm:gap-4 md:gap-6 h-[18vh] sm:h-[20vh] z-30 pb-4">
 
         {/* Player Hand */}
-        <div className="flex gap-2 sm:gap-4 md:gap-6 justify-center z-20">
+        <div className="flex gap-3 sm:gap-4 md:gap-6 justify-center z-20">
           {gameState.playerHand.map((card, index) => {
             const isSelected = selectedCardId === card.id;
             return (

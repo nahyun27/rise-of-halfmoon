@@ -11,7 +11,7 @@ function TutorialCard({ phase, owner = 'player', isFaceDown = false }: { phase: 
 
   return (
     <div
-      className="tutorial-card transition-transform hover:-translate-y-2 relative w-[60px] h-[75px] sm:w-[70px] sm:h-[88px] md:w-[80px] md:h-[100px] text-[24px] sm:text-[32px] md:text-[40px]"
+      className="tutorial-card transition-transform hover:-translate-y-2 relative w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] md:w-[80px] md:h-[80px] text-[24px] sm:text-[32px] md:text-[40px]"
       style={{
         borderRadius: '8px',
         border: `3px solid ${owner === 'player' ? '#fff' : '#000'}`,
@@ -32,14 +32,10 @@ function TutorialCard({ phase, owner = 'player', isFaceDown = false }: { phase: 
   );
 }
 
-const EmptySlot = () => (
-  <div className="w-[60px] h-[75px] sm:w-[70px] sm:h-[88px] md:w-[80px] md:h-[100px]"
-    style={{
-      borderRadius: '8px',
-      border: '2px dashed rgba(100, 150, 255, 0.3)',
-      background: 'rgba(20, 20, 40, 0.5)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center'
-    }}>
+const EmptySlot = ({ highlight = false }: { highlight?: boolean }) => (
+  <div className={`w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] md:w-[80px] md:h-[80px]
+    rounded-[8px] border-2 border-dashed ${highlight ? 'border-indigo-400 bg-indigo-900/50' : 'border-indigo-500/30 bg-indigo-950/30'}
+    flex items-center justify-center transition-all duration-200`}>
     <div className="w-2 h-2 rounded-full bg-indigo-500/50"></div>
   </div>
 );
