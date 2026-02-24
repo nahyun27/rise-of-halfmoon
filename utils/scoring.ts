@@ -1,127 +1,134 @@
-import { MoonCard } from "../types/game";
-
-export type BoardType = (MoonCard | null)[][];
+import { BoardNode, MoonCard } from "../types/game";
 
 export interface ScoringEvent {
   points: number;
   owner: 'player' | 'opponent';
   type: 'PAIR' | 'FULL_MOON' | 'CHAIN';
-  cells: { r: number; c: number }[];
+  nodeIds: string[];
 }
 
-const ORTHOGONAL_DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+// Convert nodes to a lookup map for easy access
+type NodeMap = Map<string, BoardNode>;
 
-export function checkPhasePairs(board: BoardType, row: number, col: number): ScoringEvent[] {
-  const card = board[row][col];
+function getNodesMap(nodes: BoardNode[]): NodeMap {
+  const map = new Map<string, BoardNode>();
+  for (const n of nodes) {
+    if (n.card) map.set(n.id, n);
+  }
+  return map;
+}
+
+export function checkPhasePairs(nodeMap: NodeMap, placedNode: BoardNode): ScoringEvent[] {
+  const events: ScoringEvent[] = [];
+  const card = placedNode.card;
   if (!card) return [];
 
-  const events: ScoringEvent[] = [];
-
-  for (const [dr, dc] of ORTHOGONAL_DIRS) {
-    const nr = row + dr;
-    const nc = col + dc;
-    if (nr >= 0 && nr < 6 && nc >= 0 && nc < 8) {
-      const neighbor = board[nr][nc];
-      if (neighbor && neighbor.phase === card.phase) {
-        events.push({
-          points: 1,
-          owner: card.owner as 'player' | 'opponent',
-          type: 'PAIR',
-          cells: [{ r: row, c: col }, { r: nr, c: nc }]
-        });
-      }
+  for (const neighborId of placedNode.connectedTo) {
+    const neighbor = nodeMap.get(neighborId);
+    if (neighbor && neighbor.card && neighbor.card.phase === card.phase) {
+      events.push({
+        points: 1,
+        owner: card.owner as 'player' | 'opponent',
+        type: 'PAIR',
+        nodeIds: [placedNode.id, neighborId]
+      });
     }
   }
   return events;
 }
 
-export function checkFullMoonPairs(board: BoardType, row: number, col: number): ScoringEvent[] {
-  const card = board[row][col];
+export function checkFullMoonPairs(nodeMap: NodeMap, placedNode: BoardNode): ScoringEvent[] {
+  const events: ScoringEvent[] = [];
+  const card = placedNode.card;
   if (!card) return [];
 
-  const events: ScoringEvent[] = [];
-
-  for (const [dr, dc] of ORTHOGONAL_DIRS) {
-    const nr = row + dr;
-    const nc = col + dc;
-    if (nr >= 0 && nr < 6 && nc >= 0 && nc < 8) {
-      const neighbor = board[nr][nc];
-      if (neighbor && Math.abs(neighbor.phase - card.phase) === 4) {
-        events.push({
-          points: 2,
-          owner: card.owner as 'player' | 'opponent',
-          type: 'FULL_MOON',
-          cells: [{ r: row, c: col }, { r: nr, c: nc }]
-        });
-      }
+  for (const neighborId of placedNode.connectedTo) {
+    const neighbor = nodeMap.get(neighborId);
+    if (neighbor && neighbor.card && Math.abs(neighbor.card.phase - card.phase) === 4) {
+      events.push({
+        points: 2,
+        owner: card.owner as 'player' | 'opponent',
+        type: 'FULL_MOON',
+        nodeIds: [placedNode.id, neighborId]
+      });
     }
   }
   return events;
 }
 
-export function findLunarChains(board: BoardType, row: number, col: number): ScoringEvent[] {
-  const card = board[row][col];
+export function findLunarChains(nodeMap: NodeMap, placedNode: BoardNode): ScoringEvent[] {
+  const events: ScoringEvent[] = [];
+  const card = placedNode.card;
   if (!card) return [];
 
-  const events: ScoringEvent[] = [];
+  // Finding sequences: A valid chain must be ascending (+1) or descending (-1).
+  // Wait, chronological order: either 0 -> 1 -> 2..., or 2 -> 1 -> 0... (reverse chronological is also a sequence visually on the board).
+  // Actually, we can just do BFS to find paths of strictly +1 or -1 phase.
+  // We'll search for paths extending outwards that match the +1 delta, and separately the -1 delta.
 
-  // Two axes: Horizontal (left-right) and Vertical (up-down)
-  const axes = [
-    [[0, -1], [0, 1]], // Horizontal axis (Left, Right)
-    [[-1, 0], [1, 0]]  // Vertical axis (Up, Down)
-  ];
+  function dfs(currentId: string, phaseDelta: 1 | -1, visited: Set<string>): string[] {
+    const node = nodeMap.get(currentId);
+    if (!node || !node.card) return [currentId];
 
-  for (const axis of axes) {
-    // We check 2 sequence directions for this physical line (e.g. going left is +1 vs going left is -1)
-    for (const forwardIsPlus of [true, false]) {
-      const chainCells: { r: number, c: number, phase: number }[] = [{ r: row, c: col, phase: card.phase }];
+    let longestPath: string[] = [currentId];
+    visited.add(currentId);
 
-      const dir1 = axis[0]; // expand backwards
-      const dir1Delta = forwardIsPlus ? -1 : 1;
-      let currPhase = card.phase;
-      let r = row + dir1[0]; let c = col + dir1[1];
-      while (r >= 0 && r < 6 && c >= 0 && c < 8 && board[r]?.[c]) {
-        const expectedPhase = (currPhase + dir1Delta + 8) % 8;
-        if (board[r][c]!.phase === expectedPhase) {
-          chainCells.unshift({ r, c, phase: expectedPhase });
-          currPhase = expectedPhase;
-          r += dir1[0]; c += dir1[1];
-        } else break;
-      }
-
-      const dir2 = axis[1]; // expand forwards
-      const dir2Delta = forwardIsPlus ? 1 : -1;
-      currPhase = card.phase;
-      r = row + dir2[0]; c = col + dir2[1];
-      while (r >= 0 && r < 6 && c >= 0 && c < 8 && board[r]?.[c]) {
-        const expectedPhase = (currPhase + dir2Delta + 8) % 8;
-        if (board[r][c]!.phase === expectedPhase) {
-          chainCells.push({ r, c, phase: expectedPhase });
-          currPhase = expectedPhase;
-          r += dir2[0]; c += dir2[1];
-        } else break;
-      }
-
-      if (chainCells.length >= 3) {
-        events.push({
-          points: chainCells.length,
-          owner: card.owner as 'player' | 'opponent',
-          type: 'CHAIN',
-          cells: chainCells.map(cell => ({ r: cell.r, c: cell.c }))
-        });
-        break; // don't double count if somehow both forwardIsPlus and !forwardIsPlus pass (impossible unless all cards are same, but we already handled same phases in checkPhasePairs)
+    for (const nId of node.connectedTo) {
+      if (!visited.has(nId)) {
+        const neighbor = nodeMap.get(nId);
+        if (neighbor && neighbor.card) {
+          const expectedPhase = (node.card.phase + phaseDelta + 8) % 8;
+          if (neighbor.card.phase === expectedPhase) {
+            const subPath = dfs(nId, phaseDelta, new Set(visited));
+            if (subPath.length + 1 > longestPath.length) {
+              longestPath = [currentId, ...subPath];
+            }
+          }
+        }
       }
     }
+
+    visited.delete(currentId);
+    return longestPath;
   }
+
+  // A path going forward (+1) and a path going backward (-1) connect through the placed node.
+  // Ascending sequence mapping (e.g. 1 -> 2 -> 3)
+  const forwardAsc = dfs(placedNode.id, 1, new Set()); // 2 -> 3
+  const backwardAsc = dfs(placedNode.id, -1, new Set()); // 2 -> 1 -> 0
+
+  // The actual chain is backwardAsc reversed + placed Node + forwardAsc without placed node
+  // example: backward: [placed, 1, 0]. forward: [placed, 3, 4].
+  // chain: [0, 1, placed, 3, 4] -> length 5.
+  const chainAsc = [...backwardAsc.reverse(), ...forwardAsc.slice(1)];
+
+  if (chainAsc.length >= 3) {
+    events.push({
+      points: chainAsc.length,
+      owner: card.owner as 'player' | 'opponent',
+      type: 'CHAIN',
+      nodeIds: chainAsc
+    });
+  }
+
+  // Descending sequence mapping (e.g. 3 -> 2 -> 1)
+  // This is actually physically exactly the same chain but in reverse chronological order!
+  // BUT the check in the prompt stated: "3+ consecutive phases in order. Can wrap around. Score = chain length."
+  // Typically this means strictly 0,1,2,3... but on a graph, since the edges are undirected, if [0,1,2] exists,
+  // that implies "0 is connected to 1, 1 is connected to 2". We already found it with the Ascending check.
+  // There's no separate directed line. Finding it once is enough!
 
   return events;
 }
 
-export function evaluatePlacement(board: BoardType, row: number, col: number): ScoringEvent[] {
-  const pairs = checkPhasePairs(board, row, col);
-  const fullMoons = checkFullMoonPairs(board, row, col);
-  const chains = findLunarChains(board, row, col);
+export function evaluateGraphPlacement(nodes: BoardNode[], placedId: string): ScoringEvent[] {
+  const nodeMap = getNodesMap(nodes);
+  const placedNode = nodeMap.get(placedId);
+  if (!placedNode) return [];
 
-  // Combine all valid scoring events
+  const pairs = checkPhasePairs(nodeMap, placedNode);
+  const fullMoons = checkFullMoonPairs(nodeMap, placedNode);
+  const chains = findLunarChains(nodeMap, placedNode);
+
   return [...pairs, ...fullMoons, ...chains];
 }

@@ -4,8 +4,21 @@ export interface MoonCard {
   owner: 'player' | 'opponent' | null;
 }
 
+export interface BoardNode {
+  id: string;
+  position: { x: number; y: number }; // Visual position in percentage (0-100) or pixels. Let's use 0-100% for relative positioning inside a container.
+  card: MoonCard | null;
+  connectedTo: string[]; // IDs of connected nodes
+}
+
+export interface BoardLayout {
+  levelNumber: number;
+  name: string;
+  nodes: BoardNode[];
+}
+
 export interface GameState {
-  board: (MoonCard | null)[][]; // 2D grid
+  layout: BoardLayout;
   playerHand: MoonCard[];
   opponentHand: MoonCard[];
   playerScore: number;

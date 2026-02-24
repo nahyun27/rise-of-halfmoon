@@ -2,20 +2,23 @@
 
 import React, { useState, useEffect } from 'react';
 import { MoonCard } from "../components/MoonCard";
-import { MoonCard as MoonCardType, GameState } from "../types/game";
-import { evaluatePlacement, ScoringEvent } from "../utils/scoring";
+import { MoonCard as MoonCardType, GameState, BoardNode } from "../types/game";
+import { evaluateGraphPlacement, ScoringEvent } from "../utils/scoring";
+import { LEVEL_LAYOUTS } from "../constants/layouts";
 
 interface ScorePopupData {
   id: string;
   points: number;
   type: string;
-  r: number;
-  c: number;
+  nodeId: string;
 }
 
 export default function Home() {
+  const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
+  const currentLayout = LEVEL_LAYOUTS[currentLevelIndex];
+
   const [gameState, setGameState] = useState<GameState>({
-    board: Array(6).fill(null).map(() => Array(8).fill(null)),
+    layout: JSON.parse(JSON.stringify(currentLayout)), // deep copy to allow mutations
     playerHand: [
       { id: 'p1', phase: 0, owner: 'player' },
       { id: 'p2', phase: 4, owner: 'player' },
@@ -32,11 +35,11 @@ export default function Home() {
   });
 
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  const [hoveredCell, setHoveredCell] = useState<{ r: number, c: number } | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   // Visual effects state
   const [scorePopups, setScorePopups] = useState<ScorePopupData[]>([]);
-  const [highlightedCells, setHighlightedCells] = useState<{ r: number, c: number }[]>([]);
+  const [highlightedNodes, setHighlightedNodes] = useState<string[]>([]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -46,64 +49,62 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const isBoardEmpty = gameState.board.every(row => row.every(cell => cell === null));
+  const isBoardEmpty = gameState.layout.nodes.every(node => node.card === null);
 
-  const isValidPlacement = (r: number, c: number) => {
-    if (gameState.board[r][c] !== null) return false;
+  const isValidPlacement = (nodeId: string) => {
+    const node = gameState.layout.nodes.find(n => n.id === nodeId);
+    if (!node || node.card !== null) return false;
     if (isBoardEmpty) return true;
 
-    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]]; // 8-way adjacent
-    for (const [dr, dc] of dirs) {
-      const nr = r + dr;
-      const nc = c + dc;
-      if (nr >= 0 && nr < 6 && nc >= 0 && nc < 8 && gameState.board[nr][nc] !== null) {
-        return true;
-      }
+    // Check if connected to any placed card
+    for (const neighborId of node.connectedTo) {
+      const neighbor = gameState.layout.nodes.find(n => n.id === neighborId);
+      if (neighbor && neighbor.card !== null) return true;
     }
     return false;
   };
 
-  const handleCellClick = (r: number, c: number) => {
+  const handleNodeClick = (nodeId: string) => {
     if (!selectedCardId) return;
-    if (!isValidPlacement(r, c)) return;
+    if (!isValidPlacement(nodeId)) return;
 
     const selectedCardIndex = gameState.playerHand.findIndex(card => card.id === selectedCardId);
     if (selectedCardIndex === -1) return;
 
     const card = gameState.playerHand[selectedCardIndex];
 
-    const newBoard = gameState.board.map(row => [...row]);
-    newBoard[r][c] = { ...card, owner: 'player' };
+    const newNodes = gameState.layout.nodes.map(n =>
+      n.id === nodeId ? { ...n, card: { ...card, owner: 'player' as const } } : { ...n }
+    );
 
     // Evaluate Scorings
-    const events = evaluatePlacement(newBoard, r, c);
+    const events = evaluateGraphPlacement(newNodes, nodeId);
 
     let addedPlayerScore = 0;
 
-    // Process Events (apply points, change chain ownership if stolen)
     const newPopups: ScorePopupData[] = [];
-    const newHighlights: { r: number, c: number }[] = [];
+    const newHighlights: string[] = [];
 
     events.forEach((event, i) => {
       if (event.owner === 'player') addedPlayerScore += event.points;
 
       // If it's a chain, steal cards by changing ownership
       if (event.type === 'CHAIN') {
-        event.cells.forEach(cell => {
-          if (newBoard[cell.r][cell.c]) {
-            newBoard[cell.r][cell.c]!.owner = 'player';
+        event.nodeIds.forEach(id => {
+          const targetNode = newNodes.find(n => n.id === id);
+          if (targetNode && targetNode.card) {
+            targetNode.card.owner = 'player';
           }
         });
       }
 
-      newHighlights.push(...event.cells);
+      newHighlights.push(...event.nodeIds);
 
       newPopups.push({
         id: `popup-${Date.now()}-${i}`,
         points: event.points,
         type: event.type,
-        r,
-        c
+        nodeId: nodeId
       });
     });
 
@@ -112,50 +113,80 @@ export default function Home() {
 
     setGameState(prev => ({
       ...prev,
-      board: newBoard,
+      layout: { ...prev.layout, nodes: newNodes },
       playerHand: newHand,
       playerScore: prev.playerScore + addedPlayerScore
     }));
 
     setSelectedCardId(null);
-    setHoveredCell(null);
+    setHoveredNodeId(null);
 
     if (newPopups.length > 0) {
       setScorePopups(prev => [...prev, ...newPopups]);
-      setHighlightedCells(newHighlights);
+      setHighlightedNodes(newHighlights);
 
       setTimeout(() => {
         setScorePopups(prev => prev.filter(p => !newPopups.find(np => np.id === p.id)));
-        setHighlightedCells([]);
+        setHighlightedNodes([]);
       }, 2000);
     }
   };
 
   const selectedCard = gameState.playerHand.find(c => c.id === selectedCardId);
 
+  // Create unique edges for rendering
+  const connections = new Set<string>();
+  gameState.layout.nodes.forEach(node => {
+    node.connectedTo.forEach(targetId => {
+      const sortedPair = [node.id, targetId].sort().join('-');
+      connections.add(sortedPair);
+    });
+  });
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-12 px-8 bg-[#0a0a1a] text-white font-sans selection:bg-indigo-500/30">
 
       <div className="flex flex-col items-center gap-8 w-full max-w-5xl relative">
 
-        {/* Score Popups overlay */}
-        {scorePopups.map((popup) => (
-          <div
-            key={popup.id}
-            className="absolute z-50 animate-bounce pointer-events-none drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
-            style={{
-              left: `calc(50% + ${(popup.c - 3.5) * 92}px)`,
-              top: `calc(50% + ${(popup.r - 2.5) * 132 - 40}px)`
-            }}
-          >
-            <div className="text-3xl font-black text-yellow-300 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
-              +{popup.points}
-            </div>
-            <div className="text-xs font-bold text-center text-yellow-100 uppercase mt-1">
-              {popup.type.replace('_', ' ')}
-            </div>
+        {/* Level Controls / Header */}
+        <div className="w-full flex justify-between items-center text-sm font-bold tracking-[0.2em] text-indigo-400">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => {
+                const next = (currentLevelIndex + 1) % LEVEL_LAYOUTS.length;
+                setCurrentLevelIndex(next);
+                setGameState(prev => ({ ...prev, layout: JSON.parse(JSON.stringify(LEVEL_LAYOUTS[next])) }));
+              }}
+              className="px-4 py-2 border border-indigo-500/30 rounded-full hover:bg-indigo-500/20 transition disabled:opacity-50"
+            >
+              NEXT LEVEL
+            </button>
+            <span>LEVEL {gameState.layout.levelNumber}: {gameState.layout.name.toUpperCase()}</span>
           </div>
-        ))}
+        </div>
+
+        {/* Score Popups overlay */}
+        {scorePopups.map((popup) => {
+          const targetNode = gameState.layout.nodes.find(n => n.id === popup.nodeId);
+          if (!targetNode) return null;
+          return (
+            <div
+              key={popup.id}
+              className="absolute z-50 animate-bounce pointer-events-none drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
+              style={{
+                left: `calc(${targetNode.position.x}% - 20px)`,
+                top: `calc(${targetNode.position.y}% - 60px)`
+              }}
+            >
+              <div className="text-3xl font-black text-yellow-300 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
+                +{popup.points}
+              </div>
+              <div className="text-xs font-bold text-center text-yellow-100 uppercase mt-1">
+                {popup.type.replace('_', ' ')}
+              </div>
+            </div>
+          )
+        })}
 
         {/* Opponent Area */}
         <div className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-red-950/20 to-black/40 border border-red-500/20 rounded-2xl backdrop-blur-md shadow-[0_0_30px_rgba(220,38,38,0.05)]">
@@ -166,53 +197,91 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Game Board Grid */}
-        <div className="p-8 rounded-[2rem] bg-white/[0.02] backdrop-blur-xl border border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.5)] relative">
-          <div className="grid grid-rows-6 grid-cols-8 gap-3 relative">
-            {gameState.board.map((row, r) =>
-              row.map((cell, c) => {
-                const isValid = selectedCardId ? isValidPlacement(r, c) : false;
-                const isHovered = hoveredCell?.r === r && hoveredCell?.c === c;
-                const isHighlighted = highlightedCells.some(hc => hc.r === r && hc.c === c);
+        {/* Game Board (Node Graph) */}
+        <div className="w-full max-w-4xl h-[600px] p-8 rounded-[2rem] bg-indigo-950/[0.05] backdrop-blur-xl border border-indigo-500/10 shadow-[inner_0_0_100px_rgba(30,27,75,0.8)] relative overflow-hidden">
 
-                return (
-                  <div
-                    key={`${r}-${c}`}
-                    onClick={() => handleCellClick(r, c)}
-                    onMouseEnter={() => setHoveredCell({ r, c })}
-                    onMouseLeave={() => setHoveredCell(null)}
-                    className={`
-                      relative w-[80px] h-[120px] rounded-xl border-2 flex items-center justify-center
-                      transition-all duration-300 ease-out box-border
-                      ${cell ? 'border-transparent' : 'border-white/[0.03] bg-white/[0.01]'}
-                      ${!cell && !selectedCardId ? 'hover:bg-white/[0.03] hover:border-white/[0.08]' : ''}
-                      ${isValid && !cell ? 'border-green-500/40 bg-green-500/5 hover:bg-green-500/20 hover:border-green-400/80 hover:shadow-[0_0_20px_rgba(74,222,128,0.4)] cursor-pointer' : ''}
-                      ${selectedCardId && !isValid && !cell ? 'hover:bg-red-500/10 hover:border-red-500/40 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)] cursor-not-allowed border-red-500/10 bg-red-500/5' : ''}
-                      ${isHighlighted ? 'scale-105 shadow-[0_0_25px_rgba(253,224,71,0.6)] z-20 transition-all duration-500' : 'z-0'}
-                    `}
-                  >
-                    {/* Render placed card */}
-                    {cell && (
-                      <div className="absolute inset-0 animate-in fade-in zoom-in-95 duration-500">
-                        <MoonCard card={cell} />
-                      </div>
-                    )}
+          {/* SVG Connections Container */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ filter: 'drop-shadow(0 0 8px rgba(99,102,241,0.3))' }}>
+            {Array.from(connections).map(pair => {
+              const [id1, id2] = pair.split('-');
+              const n1 = gameState.layout.nodes.find(n => n.id === id1);
+              const n2 = gameState.layout.nodes.find(n => n.id === id2);
+              if (!n1 || !n2) return null;
 
-                    {/* Render placement preview */}
-                    {!cell && isValid && isHovered && selectedCard && (
-                      <div className="absolute inset-0 opacity-40 scale-95 pointer-events-none transition-all animate-pulse">
-                        <MoonCard card={selectedCard} />
-                      </div>
-                    )}
+              // Light up line if both nodes have cards
+              const isActive = n1.card !== null && n2.card !== null;
 
-                    {isHighlighted && (
-                      <div className="absolute inset-0 border-[3px] border-yellow-300 rounded-xl animate-pulse pointer-events-none"></div>
-                    )}
+              return (
+                <line
+                  key={pair}
+                  x1={`${n1.position.x}%`}
+                  y1={`${n1.position.y}%`}
+                  x2={`${n2.position.x}%`}
+                  y2={`${n2.position.y}%`}
+                  className={`transition-all duration-1000 ${isActive ? 'stroke-indigo-400 stroke-[3]' : 'stroke-indigo-800/40 stroke-[2] stroke-dasharray-[4,4]'}`}
+                />
+              );
+            })}
+          </svg>
+
+          {/* Node Render Loop */}
+          {gameState.layout.nodes.map(node => {
+            const isValid = selectedCardId ? isValidPlacement(node.id) : false;
+            const isHovered = hoveredNodeId === node.id;
+            const isHighlighted = highlightedNodes.includes(node.id);
+
+            return (
+              <div
+                key={node.id}
+                onClick={() => handleNodeClick(node.id)}
+                onMouseEnter={() => setHoveredNodeId(node.id)}
+                onMouseLeave={() => setHoveredNodeId(null)}
+                className={`
+                   absolute transform -translate-x-1/2 -translate-y-1/2 w-[80px] h-[120px] rounded-xl z-10 flex flex-col items-center justify-center transition-all duration-300
+                   ${node.card ? 'cursor-default' : isValid && selectedCardId ? 'cursor-pointer' : selectedCardId ? 'cursor-not-allowed opacity-50 saturate-0' : 'cursor-default opacity-80'}
+                 `}
+                style={{
+                  left: `${node.position.x}%`,
+                  top: `${node.position.y}%`,
+                }}
+              >
+                {/* Empty Node Slot Styling */}
+                {!node.card && (
+                  <div className={`
+                       absolute inset-0 rounded-xl border-2 transition-all duration-300
+                       ${isValid && selectedCardId ? 'border-green-400 bg-green-500/10 shadow-[0_0_30px_rgba(74,222,128,0.5)] animate-pulse' : 'border-indigo-500/20 bg-black/40 border-dashed'}
+                       ${!isValid && selectedCardId ? 'border-red-500/20 bg-red-900/10' : ''}
+                       ${isHovered && isValid && selectedCardId ? 'border-green-300 bg-green-400/20 scale-105' : ''}
+                     `}>
+                    {/* Center Dot for Empty node */}
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-indigo-500/50"></div>
                   </div>
-                )
-              })
-            )}
-          </div>
+                )}
+
+                {/* Placed Card */}
+                {node.card && (
+                  <div className={`absolute inset-0 w-full h-full animate-in zoom-in spin-in-1 max-w-[80px] max-h-[120px]`}>
+                    <MoonCard card={node.card} />
+                  </div>
+                )}
+
+                {/* Placement Preview */}
+                {!node.card && isValid && isHovered && selectedCard && (
+                  <div className="absolute inset-0 opacity-40 scale-95 pointer-events-none transition-all">
+                    <MoonCard card={selectedCard} />
+                  </div>
+                )}
+
+                {/* Highlight Ring (Scoring effect) */}
+                {isHighlighted && (
+                  <div className="absolute -inset-2 rounded-2xl border-4 border-yellow-300/80 pointer-events-none animate-ping opacity-50 z-20"></div>
+                )}
+                {isHighlighted && (
+                  <div className="absolute -inset-1 rounded-xl border-4 border-yellow-300 pointer-events-none shadow-[0_0_30px_rgba(253,224,71,1)] z-20"></div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Player Hand Area */}
@@ -254,6 +323,7 @@ export default function Home() {
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );
