@@ -1,4 +1,4 @@
-# 🌙 Rise of Halfmoon
+# 🌜 Rise of Halfmoon
 
 > Strategic moon phase card game - Battle the Half Moon
 
@@ -41,11 +41,6 @@ A card game where you connect moon phases to score points. Match same phases, cr
 npm install
 npm run dev
 \`\`\`
-
-## 👤 Author
-
-**Nahyun Kim**  
-🔗 [GitHub](https://github.com/nahyun27)
 
 ---
 
