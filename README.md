@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🌙 Rise of Halfmoon
 
-## Getting Started
+> Strategic moon phase card game - Battle the Half Moon
 
-First, run the development server:
+A card game where you connect moon phases to score points. Match same phases, create lunar cycles, and outsmart your opponent!
 
-```bash
+🎮 **[Play Now](#)** *(Coming soon)*
+
+## 🎴 Game Rules
+
+### Scoring Methods
+
+**1. Phase Pair (1 point)**
+- Match two identical moon phases
+- Example: 🌒 + 🌒
+
+**2. Full Moon Pair (2 points)**
+- Match opposite phases that form a full moon
+- Example: 🌒 + 🌖
+
+**3. Lunar Cycle (N points)**
+- Connect 3+ cards in phase order
+- Score = number of cards in chain
+- Example: 🌑 → 🌒 → 🌓 = 3 points
+
+### Special Rules
+- **Chain Steal**: Opponent can steal your chain by adding to it
+- **Card Bonus**: +1 point per card you control at game end
+- **Win Streak**: Win 3 rounds to unlock wildcard
+
+## 🛠 Tech Stack
+
+- Next.js 15
+- TypeScript
+- Framer Motion
+- Tailwind CSS
+
+## 🚀 Quick Start
+
+\`\`\`bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+\`\`\`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 👤 Author
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Nahyun Kim**  
+🔗 [GitHub](https://github.com/nahyun27)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+*Connect the cosmos, one phase at a time* 🌙
