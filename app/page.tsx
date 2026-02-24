@@ -7,10 +7,23 @@ import { evaluateGraphPlacement, ScoringEvent } from "../utils/scoring";
 import { LEVEL_LAYOUTS } from "../constants/layouts";
 import { TutorialOverlay } from "../components/TutorialOverlay";
 
+export type HighlightType = 'PAIR' | 'FULL_MOON' | 'CHAIN';
+
+interface HighlightNode {
+  nodeId: string;
+  type: HighlightType;
+}
+
+interface HighlightEdge {
+  id1: string;
+  id2: string;
+  type: HighlightType;
+}
+
 interface ScorePopupData {
   id: string;
   points: number;
-  type: string;
+  type: HighlightType;
   nodeId: string;
 }
 
@@ -41,7 +54,8 @@ export default function Home() {
 
   // Visual effects state
   const [scorePopups, setScorePopups] = useState<ScorePopupData[]>([]);
-  const [highlightedNodes, setHighlightedNodes] = useState<string[]>([]);
+  const [highlightedNodes, setHighlightedNodes] = useState<HighlightNode[]>([]);
+  const [highlightedEdges, setHighlightedEdges] = useState<HighlightEdge[]>([]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -85,7 +99,8 @@ export default function Home() {
     let addedPlayerScore = 0;
 
     const newPopups: ScorePopupData[] = [];
-    const newHighlights: string[] = [];
+    const newHighlightNodes: HighlightNode[] = [];
+    const newHighlightEdges: HighlightEdge[] = [];
 
     events.forEach((event, i) => {
       if (event.owner === 'player') addedPlayerScore += event.points;
@@ -100,12 +115,22 @@ export default function Home() {
         });
       }
 
-      newHighlights.push(...event.nodeIds);
+      event.nodeIds.forEach(id => {
+        newHighlightNodes.push({ nodeId: id, type: event.type as HighlightType });
+      });
+
+      if (event.type === 'CHAIN') {
+        for (let j = 0; j < event.nodeIds.length - 1; j++) {
+          newHighlightEdges.push({ id1: event.nodeIds[j], id2: event.nodeIds[j + 1], type: 'CHAIN' });
+        }
+      } else {
+        newHighlightEdges.push({ id1: event.nodeIds[0], id2: event.nodeIds[1], type: event.type as HighlightType });
+      }
 
       newPopups.push({
         id: `popup-${Date.now()}-${i}`,
         points: event.points,
-        type: event.type,
+        type: event.type as HighlightType,
         nodeId: nodeId
       });
     });
@@ -125,11 +150,13 @@ export default function Home() {
 
     if (newPopups.length > 0) {
       setScorePopups(prev => [...prev, ...newPopups]);
-      setHighlightedNodes(newHighlights);
+      setHighlightedNodes(prev => [...prev, ...newHighlightNodes]);
+      setHighlightedEdges(prev => [...prev, ...newHighlightEdges]);
 
       setTimeout(() => {
         setScorePopups(prev => prev.filter(p => !newPopups.find(np => np.id === p.id)));
-        setHighlightedNodes([]);
+        setHighlightedNodes(prev => prev.filter(n => !newHighlightNodes.find(nn => nn === n)));
+        setHighlightedEdges(prev => prev.filter(e => !newHighlightEdges.find(ne => ne === e)));
       }, 2000);
     }
   };
@@ -179,6 +206,12 @@ export default function Home() {
         {scorePopups.map((popup) => {
           const targetNode = gameState.layout.nodes.find(n => n.id === popup.nodeId);
           if (!targetNode) return null;
+
+          let textColor = 'text-white';
+          if (popup.type === 'CHAIN') textColor = 'text-purple-300 drop-shadow-[0_4px_4px_rgba(168,85,247,0.8)]';
+          else if (popup.type === 'FULL_MOON') textColor = 'text-yellow-300 drop-shadow-[0_4px_4px_rgba(253,224,71,0.8)]';
+          else if (popup.type === 'PAIR') textColor = 'text-blue-300 drop-shadow-[0_4px_4px_rgba(59,130,246,0.8)]';
+
           return (
             <div
               key={popup.id}
@@ -188,10 +221,10 @@ export default function Home() {
                 top: `calc(${targetNode.position.y}% - 60px)`
               }}
             >
-              <div className="text-3xl font-black text-yellow-300 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]">
+              <div className={`text-3xl font-black ${textColor} drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]`}>
                 +{popup.points}
               </div>
-              <div className="text-xs font-bold text-center text-yellow-100 uppercase mt-1">
+              <div className={`text-xs font-bold text-center uppercase mt-1 ${textColor}`}>
                 {popup.type.replace('_', ' ')}
               </div>
             </div>
@@ -221,6 +254,17 @@ export default function Home() {
               // Light up line if both nodes have cards
               const isActive = n1.card !== null && n2.card !== null;
 
+              const highlightEdge = highlightedEdges.find(e =>
+                (e.id1 === n1.id && e.id2 === n2.id) || (e.id1 === n2.id && e.id2 === n1.id)
+              );
+
+              let lineClass = isActive ? 'stroke-indigo-400 stroke-[3]' : 'stroke-indigo-800/40 stroke-[2] stroke-dasharray-[4,4]';
+              if (highlightEdge) {
+                if (highlightEdge.type === 'CHAIN') lineClass = 'stroke-purple-400 stroke-[6] drop-shadow-[0_0_10px_rgba(168,85,247,0.8)] animate-pulse';
+                else if (highlightEdge.type === 'FULL_MOON') lineClass = 'stroke-yellow-400 stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
+                else if (highlightEdge.type === 'PAIR') lineClass = 'stroke-blue-400 stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
+              }
+
               return (
                 <line
                   key={pair}
@@ -228,7 +272,7 @@ export default function Home() {
                   y1={`${n1.position.y}%`}
                   x2={`${n2.position.x}%`}
                   y2={`${n2.position.y}%`}
-                  className={`transition-all duration-1000 ${isActive ? 'stroke-indigo-400 stroke-[3]' : 'stroke-indigo-800/40 stroke-[2] stroke-dasharray-[4,4]'}`}
+                  className={`transition-all duration-1000 ${lineClass}`}
                 />
               );
             })}
@@ -238,7 +282,17 @@ export default function Home() {
           {gameState.layout.nodes.map(node => {
             const isValid = selectedCardId ? isValidPlacement(node.id) : false;
             const isHovered = hoveredNodeId === node.id;
-            const isHighlighted = highlightedNodes.includes(node.id);
+
+            const nodeHighlights = highlightedNodes.filter(hn => hn.nodeId === node.id).map(hn => hn.type);
+            const isChain = nodeHighlights.includes('CHAIN');
+            const isFullMoon = nodeHighlights.includes('FULL_MOON');
+            const isPair = nodeHighlights.includes('PAIR');
+
+            let ringColor = '';
+            if (isChain) ringColor = 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.8)]';
+            else if (isFullMoon) ringColor = 'border-yellow-300 shadow-[0_0_30px_rgba(253,224,71,1)]';
+            else if (isPair) ringColor = 'border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.8)]';
+
 
             return (
               <div
@@ -283,11 +337,11 @@ export default function Home() {
                 )}
 
                 {/* Highlight Ring (Scoring effect) */}
-                {isHighlighted && (
-                  <div className="absolute -inset-2 rounded-2xl border-4 border-yellow-300/80 pointer-events-none animate-ping opacity-50 z-20"></div>
-                )}
-                {isHighlighted && (
-                  <div className="absolute -inset-1 rounded-xl border-4 border-yellow-300 pointer-events-none shadow-[0_0_30px_rgba(253,224,71,1)] z-20"></div>
+                {ringColor && (
+                  <>
+                    <div className={`absolute -inset-2 rounded-2xl border-4 pointer-events-none animate-ping opacity-50 z-20 ${ringColor}`}></div>
+                    <div className={`absolute -inset-1 rounded-xl border-4 pointer-events-none z-20 ${ringColor}`}></div>
+                  </>
                 )}
               </div>
             );
