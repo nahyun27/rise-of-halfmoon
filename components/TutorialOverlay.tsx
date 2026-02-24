@@ -25,7 +25,7 @@ const MiniNode = ({ card, highlight = false, connected = false }: { card: MoonCa
     `}>
       {!card && <div className="w-2 h-2 rounded-full bg-indigo-500/50"></div>}
       {card && (
-        <div className="absolute inset-0 max-w-[60px] max-h-[90px] rounded-xl overflow-hidden scale-[0.75] origin-top-left -ml-1.5 -mt-1.5">
+        <div className="absolute inset-0 max-w-[60px] max-h-[60px] rounded-xl overflow-hidden scale-[0.75] origin-top-left -ml-1.5 mt-2">
           <MoonCard card={card} />
         </div>
       )}

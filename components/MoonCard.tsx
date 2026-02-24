@@ -8,9 +8,10 @@ const MOON_EMOJIS = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '�
 interface MoonCardProps {
   card: MoonCardType;
   onClick?: (card: MoonCardType) => void;
+  isFaceDown?: boolean;
 }
 
-export const MoonCard: React.FC<MoonCardProps> = ({ card, onClick }) => {
+export const MoonCard: React.FC<MoonCardProps> = ({ card, onClick, isFaceDown = false }) => {
   const getBorderColor = () => {
     switch (card.owner) {
       case 'player': return 'border-white shadow-[0_0_12px_rgba(255,255,255,0.4)]';
@@ -23,7 +24,7 @@ export const MoonCard: React.FC<MoonCardProps> = ({ card, onClick }) => {
     <div
       onClick={() => onClick?.(card)}
       className={`
-        group relative w-[80px] h-[120px] 
+        group relative w-[80px] h-[80px] 
         rounded-xl 
         border-[3px]
         flex flex-col items-center justify-between
@@ -41,16 +42,20 @@ export const MoonCard: React.FC<MoonCardProps> = ({ card, onClick }) => {
           card.owner === 'opponent' ? '0 0 15px rgba(0,0,0,0.4)' : undefined
       }}
     >
-      <div className="text-[12px] text-gray-400 font-bold self-start leading-none opacity-80">
-        {card.phase}
-      </div>
+      {isFaceDown ? (
+        <div className="flex-grow flex items-center justify-center opacity-40 text-4xl mt-2 drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+          🌙
+        </div>
+      ) : (
+        <>
+          <div className="text-[38px] filter drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-transform duration-300 group-hover:scale-110 flex-grow flex items-center justify-center -translate-y-[2px]">
+            {MOON_EMOJIS[card.phase]}
+          </div>
 
-      <div className="text-4xl filter drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-transform duration-300 group-hover:scale-110 flex-grow flex items-center justify-center">
-        {MOON_EMOJIS[card.phase]}
-      </div>
-
-      {/* Decorative bottom element */}
-      <div className="h-1 w-6 rounded-full bg-white/10 group-hover:bg-white/30 transition-colors duration-300"></div>
+          {/* Decorative bottom element */}
+          <div className="h-1 w-6 rounded-full bg-white/10 group-hover:bg-white/30 transition-colors duration-300 mb-1"></div>
+        </>
+      )}
     </div>
   );
 };

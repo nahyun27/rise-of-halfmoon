@@ -1,4 +1,7 @@
-"use client";
+const fs = require('fs');
+const path = require('path');
+
+const pageContent = `"use client";
 
 import React, { useState, useEffect } from 'react';
 import { MoonCard } from "../components/MoonCard";
@@ -39,7 +42,7 @@ interface ScorePopupData {
 
 const generateDeck = (size: number, owner: 'player' | 'opponent'): MoonCardType[] => {
   return Array(size).fill(null).map((_, i) => ({
-    id: `${owner}-deck-${Date.now()}-${i}-${Math.random()}`,
+    id: \`\${owner}-deck-\${Date.now()}-\${i}-\${Math.random()}\`,
     phase: Math.floor(Math.random() * 8),
     owner
   }));
@@ -267,7 +270,7 @@ export default function Home() {
       }
 
       newPopups.push({
-        id: `popup-${Date.now()}-${i}`,
+        id: \`popup-\${Date.now()}-\${i}\`,
         points: event.points,
         type: event.type as HighlightType,
         nodeId: nodeId
@@ -485,14 +488,14 @@ export default function Home() {
               key={popup.id}
               className="absolute z-50 animate-bounce pointer-events-none drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
               style={{
-                left: `calc(${targetNode.position.x}% - 20px)`,
-                top: `calc(${targetNode.position.y}% - 60px)`
+                left: \`calc(\${targetNode.position.x}% - 20px)\`,
+                top: \`calc(\${targetNode.position.y}% - 60px)\`
               }}
             >
-              <div className={`text-3xl font-black ${textColor} drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]`}>
-                +{popup.points}
+              <div className={\`text-3xl font-black \${textColor} drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]\`}>
+                +\{popup.points}
               </div>
-              <div className={`text-xs font-bold text-center uppercase mt-1 ${textColor}`}>
+              <div className={\`text-xs font-bold text-center uppercase mt-1 \${textColor}\`}>
                 {popup.type.replace('_', ' ')}
               </div>
             </div>
@@ -500,11 +503,11 @@ export default function Home() {
         })}
 
         {/* Game Board Container */}
-        <div className={`w-full max-w-4xl h-[550px] rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95
-           ${THEME_STYLES[gameState.layout.theme || 'indigo'].bg} 
-           ${THEME_STYLES[gameState.layout.theme || 'indigo'].border} 
-           ${THEME_STYLES[gameState.layout.theme || 'indigo'].shadow}
-        `}>
+        <div className={\`w-full max-w-4xl h-[550px] rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95
+           \${THEME_STYLES[gameState.layout.theme || 'indigo'].bg} 
+           \${THEME_STYLES[gameState.layout.theme || 'indigo'].border} 
+           \${THEME_STYLES[gameState.layout.theme || 'indigo'].shadow}
+        \`}>
 
           {/* SVG Connections Container */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ filter: 'drop-shadow(0 0 8px rgba(99,102,241,0.3))' }}>
@@ -520,7 +523,7 @@ export default function Home() {
               const isOccupied = n1.card !== null && n2.card !== null;
               const themeStyle = THEME_STYLES[gameState.layout.theme || 'indigo'];
 
-              let lineClass = isOccupied ? `${themeStyle.lineActive} stroke-[3]` : `${themeStyle.lineInactive} stroke-[2] stroke-dasharray-[4,4]`;
+              let lineClass = isOccupied ? \`\${themeStyle.lineActive} stroke-[3]\` : \`\${themeStyle.lineInactive} stroke-[2] stroke-dasharray-[4,4]\`;
 
               if (isHighlighted && highlightEdge) {
                 if (highlightEdge.type === 'CHAIN') lineClass = 'stroke-purple-400 stroke-[6] drop-shadow-[0_0_10px_rgba(168,85,247,0.8)] animate-pulse';
@@ -531,11 +534,11 @@ export default function Home() {
               return (
                 <line
                   key={pair}
-                  x1={`${n1.position.x}%`}
-                  y1={`${n1.position.y}%`}
-                  x2={`${n2.position.x}%`}
-                  y2={`${n2.position.y}%`}
-                  className={`transition-all duration-1000 ${lineClass}`}
+                  x1={\`\${n1.position.x}%\`}
+                  y1={\`\${n1.position.y}%\`}
+                  x2={\`\${n2.position.x}%\`}
+                  y2={\`\${n2.position.y}%\`}
+                  className={\`transition-all duration-1000 \${lineClass}\`}
                 />
               );
             })}
@@ -564,28 +567,28 @@ export default function Home() {
                 onClick={() => handleNodeClick(node.id)}
                 onMouseEnter={() => setHoveredNodeId(node.id)}
                 onMouseLeave={() => setHoveredNodeId(null)}
-                className={`
+                className={\`
                    absolute transform -translate-x-1/2 -translate-y-1/2 w-[80px] h-[80px] rounded-full z-10 flex flex-col items-center justify-center transition-all duration-300
-                   ${node.card ? 'cursor-default' : isValid && selectedCardId ? 'cursor-pointer' : selectedCardId ? 'cursor-not-allowed opacity-50 saturate-0' : 'cursor-default opacity-80'}
-                 `}
+                   \${node.card ? 'cursor-default' : isValid && selectedCardId ? 'cursor-pointer' : selectedCardId ? 'cursor-not-allowed opacity-50 saturate-0' : 'cursor-default opacity-80'}
+                 \`}
                 style={{
-                  left: `${node.position.x}%`,
-                  top: `${node.position.y}%`,
+                  left: \`\${node.position.x}%\`,
+                  top: \`\${node.position.y}%\`,
                 }}
               >
                 {!node.card && (
-                  <div className={`
+                  <div className={\`
                        absolute inset-0 rounded-full border-2 transition-all duration-300
-                       ${isValid && selectedCardId ? 'border-green-400 bg-green-500/10 shadow-[0_0_30px_rgba(74,222,128,0.5)] animate-pulse' : `${themeStyle.nodeBorder} bg-black/40 border-dashed`}
-                       ${!isValid && selectedCardId ? 'border-red-500/20 bg-red-900/10' : ''}
-                       ${isHovered && isValid && selectedCardId ? 'border-green-300 bg-green-400/20 scale-105' : ''}
-                     `}>
-                    <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${themeStyle.nodeDot}`}></div>
+                       \${isValid && selectedCardId ? 'border-green-400 bg-green-500/10 shadow-[0_0_30px_rgba(74,222,128,0.5)] animate-pulse' : \`\${themeStyle.nodeBorder} bg-black/40 border-dashed\`}
+                       \${!isValid && selectedCardId ? 'border-red-500/20 bg-red-900/10' : ''}
+                       \${isHovered && isValid && selectedCardId ? 'border-green-300 bg-green-400/20 scale-105' : ''}
+                     \`}>
+                    <div className={\`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full \${themeStyle.nodeDot}\`}></div>
                   </div>
                 )}
 
                 {node.card && (
-                  <div className={`absolute inset-0 w-full h-full animate-in zoom-in spin-in-1`}>
+                  <div className={\`absolute inset-0 w-full h-full animate-in zoom-in spin-in-1\`}>
                     <MoonCard card={node.card} />
                   </div>
                 )}
@@ -597,7 +600,7 @@ export default function Home() {
                 )}
                 
                 {ringColor && (
-                  <div className={`absolute -inset-2 rounded-2xl border-4 pointer-events-none animate-in zoom-in spin-in-2 ${ringColor} z-20`}></div>
+                  <div className={\`absolute -inset-2 rounded-2xl border-4 pointer-events-none animate-in zoom-in spin-in-2 \${ringColor} z-20\`}></div>
                 )}
 
               </div>
@@ -616,7 +619,7 @@ export default function Home() {
                return (
                   <div
                      key={card.id} 
-                     className={`transform transition-all duration-300 shadow-[0_10px_20px_rgba(0,0,0,0.5)] ${isSelected ? '-translate-y-6 scale-110' : 'hover:-translate-y-2 hover:scale-105'}`}
+                     className={\`transform transition-all duration-300 shadow-[0_10px_20px_rgba(0,0,0,0.5)] \${isSelected ? '-translate-y-6 scale-110' : 'hover:-translate-y-2 hover:scale-105'}\`}
                   >
                      <MoonCard 
                         card={card} 
@@ -642,3 +645,7 @@ export default function Home() {
     </div>
   );
 }
+`;
+
+fs.writeFileSync(path.join(__dirname, 'app/page.tsx'), pageContent, 'utf-8');
+console.log('Successfully rewrote page.tsx');

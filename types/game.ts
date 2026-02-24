@@ -1,3 +1,5 @@
+export type GamePhase = 'start' | 'tutorial' | 'playing' | 'levelWin' | 'gameOver';
+
 export interface MoonCard {
   id: string;
   phase: number; // 0-7
@@ -19,9 +21,12 @@ export interface BoardLayout {
 }
 
 export interface GameState {
+  phase: GamePhase;
   layout: BoardLayout;
   playerHand: MoonCard[];
+  playerDrawPile: MoonCard[];
   opponentHand: MoonCard[];
+  opponentDrawPile: MoonCard[];
   playerScore: number;
   opponentScore: number;
   playerHealth: number;
