@@ -14,6 +14,7 @@ export interface BoardNode {
 export interface BoardLayout {
   levelNumber: number;
   name: string;
+  theme: 'blue' | 'purple' | 'green' | 'red' | 'indigo' | 'yellow';
   nodes: BoardNode[];
 }
 

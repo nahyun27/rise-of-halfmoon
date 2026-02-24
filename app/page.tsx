@@ -6,6 +6,16 @@ import { MoonCard as MoonCardType, GameState, BoardNode } from "../types/game";
 import { evaluateGraphPlacement, ScoringEvent } from "../utils/scoring";
 import { LEVEL_LAYOUTS } from "../constants/layouts";
 import { TutorialOverlay } from "../components/TutorialOverlay";
+import { LevelCompleteOverlay } from "../components/LevelCompleteOverlay";
+
+const THEME_STYLES: Record<string, { bg: string, border: string, shadow: string, lineActive: string, lineInactive: string, nodeBorder: string, nodeDot: string }> = {
+  blue: { bg: 'bg-blue-950/[0.05]', border: 'border-blue-500/10', shadow: 'shadow-[inner_0_0_100px_rgba(30,58,136,0.8)]', lineActive: 'stroke-blue-400', lineInactive: 'stroke-blue-800/40', nodeBorder: 'border-blue-500/20', nodeDot: 'bg-blue-500/50' },
+  green: { bg: 'bg-green-950/[0.05]', border: 'border-green-500/10', shadow: 'shadow-[inner_0_0_100px_rgba(20,83,45,0.8)]', lineActive: 'stroke-green-400', lineInactive: 'stroke-green-800/40', nodeBorder: 'border-green-500/20', nodeDot: 'bg-green-500/50' },
+  purple: { bg: 'bg-purple-950/[0.05]', border: 'border-purple-500/10', shadow: 'shadow-[inner_0_0_100px_rgba(88,28,135,0.8)]', lineActive: 'stroke-purple-400', lineInactive: 'stroke-purple-800/40', nodeBorder: 'border-purple-500/20', nodeDot: 'bg-purple-500/50' },
+  indigo: { bg: 'bg-indigo-950/[0.05]', border: 'border-indigo-500/10', shadow: 'shadow-[inner_0_0_100px_rgba(49,46,129,0.8)]', lineActive: 'stroke-indigo-400', lineInactive: 'stroke-indigo-800/40', nodeBorder: 'border-indigo-500/20', nodeDot: 'bg-indigo-500/50' },
+  red: { bg: 'bg-red-950/[0.05]', border: 'border-red-500/10', shadow: 'shadow-[inner_0_0_100px_rgba(127,29,29,0.8)]', lineActive: 'stroke-red-400', lineInactive: 'stroke-red-800/40', nodeBorder: 'border-red-500/20', nodeDot: 'bg-red-500/50' },
+  yellow: { bg: 'bg-yellow-950/[0.05]', border: 'border-yellow-500/10', shadow: 'shadow-[inner_0_0_100px_rgba(113,63,18,0.8)]', lineActive: 'stroke-yellow-400', lineInactive: 'stroke-yellow-800/40', nodeBorder: 'border-yellow-500/20', nodeDot: 'bg-yellow-500/50' }
+};
 
 export type HighlightType = 'PAIR' | 'FULL_MOON' | 'CHAIN';
 
@@ -52,6 +62,50 @@ export default function Home() {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
+  const [showLevelComplete, setShowLevelComplete] = useState(false);
+
+  const isBoardEmpty = gameState.layout.nodes.every(node => node.card === null);
+  const isGameOver = gameState.playerHand.length === 0 || gameState.layout.nodes.every(node => node.card !== null);
+
+  useEffect(() => {
+    if (isGameOver && !showLevelComplete) {
+      const timer = setTimeout(() => setShowLevelComplete(true), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [isGameOver, showLevelComplete]);
+
+  const handleNextLevel = () => {
+    const next = currentLevelIndex + 1;
+    if (next < LEVEL_LAYOUTS.length) {
+      setCurrentLevelIndex(next);
+      setGameState({
+        layout: JSON.parse(JSON.stringify(LEVEL_LAYOUTS[next])),
+        playerHand: Array(5).fill(null).map((_, i) => ({ id: `p${i}-${Date.now()}`, phase: Math.floor(Math.random() * 8), owner: 'player' })),
+        opponentHand: [],
+        playerScore: 0,
+        opponentScore: 0,
+        playerHealth: 3,
+        opponentHealth: 3,
+        currentTurn: 'player'
+      });
+      setShowLevelComplete(false);
+    }
+  };
+
+  const handleRetryLevel = () => {
+    setGameState({
+      layout: JSON.parse(JSON.stringify(LEVEL_LAYOUTS[currentLevelIndex])),
+      playerHand: Array(5).fill(null).map((_, i) => ({ id: `p${i}-${Date.now()}`, phase: Math.floor(Math.random() * 8), owner: 'player' })),
+      opponentHand: [],
+      playerScore: 0,
+      opponentScore: 0,
+      playerHealth: 3,
+      opponentHealth: 3,
+      currentTurn: 'player'
+    });
+    setShowLevelComplete(false);
+  };
+
   // Visual effects state
   const [scorePopups, setScorePopups] = useState<ScorePopupData[]>([]);
   const [highlightedNodes, setHighlightedNodes] = useState<HighlightNode[]>([]);
@@ -64,8 +118,6 @@ export default function Home() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  const isBoardEmpty = gameState.layout.nodes.every(node => node.card === null);
 
   const isValidPlacement = (nodeId: string) => {
     const node = gameState.layout.nodes.find(n => n.id === nodeId);
@@ -175,6 +227,19 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-12 px-8 bg-[#0a0a1a] text-white font-sans selection:bg-indigo-500/30">
 
+      {/* Level Complete Transition Overlay */}
+      {showLevelComplete && (
+        <LevelCompleteOverlay
+          levelNumber={gameState.layout.levelNumber}
+          levelName={gameState.layout.name}
+          playerScore={gameState.playerScore}
+          opponentScore={gameState.opponentScore}
+          onNextLevel={handleNextLevel}
+          onRetry={handleRetryLevel}
+          hasNextLevel={currentLevelIndex < LEVEL_LAYOUTS.length - 1}
+        />
+      )}
+
       <div className="flex flex-col items-center gap-8 w-full max-w-5xl relative">
 
         {/* Level Controls / Header */}
@@ -241,7 +306,11 @@ export default function Home() {
         </div>
 
         {/* Game Board (Node Graph) */}
-        <div className="w-full max-w-4xl h-[600px] p-8 rounded-[2rem] bg-indigo-950/[0.05] backdrop-blur-xl border border-indigo-500/10 shadow-[inner_0_0_100px_rgba(30,27,75,0.8)] relative overflow-hidden">
+        <div className={`w-full max-w-4xl h-[600px] p-8 rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95
+           ${THEME_STYLES[gameState.layout.theme || 'indigo'].bg} 
+           ${THEME_STYLES[gameState.layout.theme || 'indigo'].border} 
+           ${THEME_STYLES[gameState.layout.theme || 'indigo'].shadow}
+        `}>
 
           {/* SVG Connections Container */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ filter: 'drop-shadow(0 0 8px rgba(99,102,241,0.3))' }}>
@@ -293,6 +362,7 @@ export default function Home() {
             else if (isFullMoon) ringColor = 'border-yellow-300 shadow-[0_0_30px_rgba(253,224,71,1)]';
             else if (isPair) ringColor = 'border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.8)]';
 
+            const themeStyle = THEME_STYLES[gameState.layout.theme || 'indigo'];
 
             return (
               <div
@@ -301,7 +371,7 @@ export default function Home() {
                 onMouseEnter={() => setHoveredNodeId(node.id)}
                 onMouseLeave={() => setHoveredNodeId(null)}
                 className={`
-                   absolute transform -translate-x-1/2 -translate-y-1/2 w-[80px] h-[120px] rounded-xl z-10 flex flex-col items-center justify-center transition-all duration-300
+                   absolute transform -translate-x-1/2 -translate-y-1/2 w-[80px] h-[80px] rounded-full z-10 flex flex-col items-center justify-center transition-all duration-300
                    ${node.card ? 'cursor-default' : isValid && selectedCardId ? 'cursor-pointer' : selectedCardId ? 'cursor-not-allowed opacity-50 saturate-0' : 'cursor-default opacity-80'}
                  `}
                 style={{
@@ -312,13 +382,13 @@ export default function Home() {
                 {/* Empty Node Slot Styling */}
                 {!node.card && (
                   <div className={`
-                       absolute inset-0 rounded-xl border-2 transition-all duration-300
-                       ${isValid && selectedCardId ? 'border-green-400 bg-green-500/10 shadow-[0_0_30px_rgba(74,222,128,0.5)] animate-pulse' : 'border-indigo-500/20 bg-black/40 border-dashed'}
+                       absolute inset-0 rounded-full border-2 transition-all duration-300
+                       ${isValid && selectedCardId ? 'border-green-400 bg-green-500/10 shadow-[0_0_30px_rgba(74,222,128,0.5)] animate-pulse' : `${themeStyle.nodeBorder} bg-black/40 border-dashed`}
                        ${!isValid && selectedCardId ? 'border-red-500/20 bg-red-900/10' : ''}
                        ${isHovered && isValid && selectedCardId ? 'border-green-300 bg-green-400/20 scale-105' : ''}
                      `}>
                     {/* Center Dot for Empty node */}
-                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-indigo-500/50"></div>
+                    <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${themeStyle.nodeDot}`}></div>
                   </div>
                 )}
 
