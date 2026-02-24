@@ -26,11 +26,11 @@ export const MoonCard: React.FC<MoonCardProps> = ({ card, onClick, isFaceDown = 
     <div
       onClick={() => onClick?.(card)}
       className={`
-        group relative w-[40px] h-[40px] sm:w-[60px] sm:h-[60px] md:w-[80px] md:h-[80px]
+        group relative w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] md:w-[80px] md:h-[80px]
         rounded-[8px]
         border-[3px]
         flex items-center justify-center
-        p-2
+        p-1 sm:p-2
         bg-gradient-to-b from-[#1a1a2e] to-[#16213e]
         cursor-pointer select-none
         transition-all duration-300 ease-out
@@ -45,11 +45,11 @@ export const MoonCard: React.FC<MoonCardProps> = ({ card, onClick, isFaceDown = 
       }}
     >
       {isFaceDown ? (
-        <div className="flex-grow flex items-center justify-center opacity-40 text-4xl drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+        <div className="flex-grow flex items-center justify-center opacity-40 text-3xl sm:text-4xl drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
           🌙
         </div>
       ) : (
-        <div className="text-[20px] sm:text-[32px] md:text-[38px] filter drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-transform duration-300 group-hover:scale-110 flex-grow flex items-center justify-center">
+        <div className="text-[28px] sm:text-[32px] md:text-[38px] filter drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-transform duration-300 group-hover:scale-110 flex-grow flex items-center justify-center">
           {MOON_EMOJIS[card.phase]}
         </div>
       )}

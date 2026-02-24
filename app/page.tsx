@@ -362,7 +362,7 @@ function DroppableNode({ node, children, isValid, isHovered, onClick, onDrop, on
       onDragLeave={onDragLeave}
       onDrop={handleDrop}
       className={`
-         absolute transform -translate-x-1/2 -translate-y-1/2 w-[40px] h-[40px] sm:w-[60px] sm:h-[60px] md:w-[80px] md:h-[80px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
+         absolute transform -translate-x-1/2 -translate-y-1/2 w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] md:w-[80px] md:h-[80px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
          ${isHovered && isValid ? 'scale-110' : ''}
          ${node.card ? 'cursor-default' : isValid ? 'cursor-pointer' : 'cursor-default opacity-80'}
        `}
@@ -968,17 +968,17 @@ export default function Home() {
 
   // GAME PLAYING PHASE
   return (
-    <div className="flex min-h-screen flex-col items-center justify-between py-8 px-8 bg-[#0a0a1a] text-white font-sans selection:bg-indigo-500/30">
+    <div className="flex w-full h-dvh flex-col items-center py-4 sm:py-8 px-4 sm:px-8 bg-[#0a0a1a] text-white font-sans selection:bg-indigo-500/30 overflow-hidden">
 
       {gameState.phase === 'tutorial' && (
         <TutorialOverlay onClose={finishTutorial} />
       )}
 
       {/* TOP: LAYOUT WRAPPER */}
-      <div className="w-full max-w-5xl flex flex-col items-center gap-2 sm:gap-4 md:gap-6 h-[18vh] sm:h-[20vh] z-30">
+      <div className="w-full max-w-5xl flex flex-col items-center gap-2 sm:gap-4 md:gap-6 z-30 shrink-0">
 
         {/* HEADER: Level & Controls */}
-        <div className="w-full flex items-center relative py-2 mb-2">
+        <div className="w-full flex items-center relative py-2 sm:py-4 mb-2">
           <div className="flex-1 flex justify-center">
             <div className="text-sm sm:text-base md:text-xl font-bold tracking-[0.2em] text-indigo-300 uppercase drop-shadow-[0_0_8px_rgba(165,180,252,0.8)] text-center">
               Level {gameState.layout.levelNumber}: {gameState.layout.name}
@@ -1040,7 +1040,7 @@ export default function Home() {
         </div>
 
         {/* AI Face-down Cards */}
-        <div className="flex gap-2 sm:gap-4 md:gap-6 justify-center z-20 h-[50px] sm:h-[60px] md:h-[80px] items-center">
+        <div className="flex gap-2 sm:gap-4 md:gap-6 justify-center z-20 h-[60px] sm:h-[60px] md:h-[80px] items-center">
           {gameState.opponentHand.map(card => {
             const isActing = aiActionState.cardId === card.id;
             const aiCardPlayVariants = {
@@ -1067,7 +1067,7 @@ export default function Home() {
       </div>
 
       {/* MIDDLE: GRAPH BOARD */}
-      <div className="flex flex-col items-center gap-4 w-full max-w-5xl relative flex-grow min-h-0 justify-center my-2 sm:my-4 z-10">
+      <div className="flex flex-col items-center justify-center w-full max-w-5xl relative flex-1 min-h-0 py-2 sm:py-4">
         {/* Score Popups overlay */}
         {scorePopups.map((popup) => {
           const targetNode = gameState.layout.nodes.find(n => n.id === popup.nodeId);
@@ -1123,183 +1123,185 @@ export default function Home() {
         )}
 
         {/* Game Board Container */}
-        <div className={`w-full max-w-[350px] sm:max-w-[450px] md:max-w-[550px] aspect-square rounded-2xl md:rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95 my-auto flex items-center justify-center
-           ${THEME_STYLES[gameState.layout.theme || 'indigo'].bg} 
-           ${THEME_STYLES[gameState.layout.theme || 'indigo'].border} 
-           ${THEME_STYLES[gameState.layout.theme || 'indigo'].shadow}
-        `}>
+        <div className="relative w-full h-full max-w-[350px] sm:max-w-[450px] md:max-w-[600px] flex items-center justify-center min-h-0">
+          <div className={`aspect-square h-full max-h-full max-w-full rounded-2xl md:rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95 shrink-0
+             ${THEME_STYLES[gameState.layout.theme || 'indigo'].bg} 
+             ${THEME_STYLES[gameState.layout.theme || 'indigo'].border} 
+             ${THEME_STYLES[gameState.layout.theme || 'indigo'].shadow}
+          `}>
 
-          {/* SVG Connections Container */}
-          <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ filter: 'drop-shadow(0 0 8px rgba(99,102,241,0.3))' }}>
-            {Array.from(connections).map(pair => {
-              const [id1, id2] = pair.split('-');
-              const n1 = gameState.layout.nodes.find(n => n.id === id1);
-              const n2 = gameState.layout.nodes.find(n => n.id === id2);
-              if (!n1 || !n2) return null;
+            {/* SVG Connections Container */}
+            <svg className="absolute inset-0 w-full h-full pointer-events-none z-0" style={{ filter: 'drop-shadow(0 0 8px rgba(99,102,241,0.3))' }}>
+              {Array.from(connections).map(pair => {
+                const [id1, id2] = pair.split('-');
+                const n1 = gameState.layout.nodes.find(n => n.id === id1);
+                const n2 = gameState.layout.nodes.find(n => n.id === id2);
+                if (!n1 || !n2) return null;
 
-              const isHighlighted = highlightedEdges.find(e => (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1));
-              const highlightEdge = highlightedEdges.find(e => (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1));
+                const isHighlighted = highlightedEdges.find(e => (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1));
+                const highlightEdge = highlightedEdges.find(e => (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1));
 
-              const permanentEdge = gameState.layout.scoredEdges?.find(e =>
-                (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1)
-              );
+                const permanentEdge = gameState.layout.scoredEdges?.find(e =>
+                  (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1)
+                );
 
-              const isOccupied = n1.card !== null && n2.card !== null;
+                const isOccupied = n1.card !== null && n2.card !== null;
 
-              // If both nodes have cards but no relationship, fall back to the inactive dashed line
-              const noRelationship = isOccupied && !permanentEdge && !isHighlighted;
-              const shouldBeActiveLine = isOccupied && !noRelationship;
+                // If both nodes have cards but no relationship, fall back to the inactive dashed line
+                const noRelationship = isOccupied && !permanentEdge && !isHighlighted;
+                const shouldBeActiveLine = isOccupied && !noRelationship;
+
+                const themeStyle = THEME_STYLES[gameState.layout.theme || 'indigo'];
+
+                let lineClass = shouldBeActiveLine ? `${themeStyle.lineActive} stroke-[2] sm:stroke-[3]` : `${themeStyle.lineInactive} stroke-[1.5px] sm:stroke-[2px] stroke-dasharray-[4,4]`;
+                let lineStyle: React.CSSProperties = { transition: 'all 1s' };
+
+                if (permanentEdge) {
+                  if (permanentEdge.type === 'CHAIN') {
+                    lineClass = 'stroke-purple-400 stroke-[3] sm:stroke-[5] drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]';
+                  } else if (permanentEdge.type === 'FULL_MOON') {
+                    lineClass = 'stroke-yellow-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
+                  } else if (permanentEdge.type === 'PAIR') {
+                    lineClass = 'stroke-blue-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
+                  }
+                }
+
+                // Highlight overrides permanent styling temporarily during animations
+                if (isHighlighted && highlightEdge) {
+                  if (highlightEdge.type === 'CHAIN') {
+                    lineClass = 'stroke-yellow-400 stroke-[3] sm:stroke-[5] drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]';
+                    lineStyle = { strokeDasharray: '100', animation: 'dash 0.4s linear forwards' };
+                  }
+                  else if (highlightEdge.type === 'FULL_MOON') lineClass = 'stroke-yellow-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
+                  else if (highlightEdge.type === 'PAIR') lineClass = 'stroke-blue-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
+                }
+
+                // Calculate positions for decorators
+                const x1 = n1.position.x;
+                const y1 = n1.position.y;
+                const x2 = n2.position.x;
+                const y2 = n2.position.y;
+
+                const midX = (x1 + x2) / 2;
+                const midY = (y1 + y2) / 2;
+
+                // Pair decorators (two empty circles) requires calculating a perpendicular offset
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const dirX = dx / dist; // normalized direction vector
+                const dirY = dy / dist;
+
+                // Perpendicular vector for pair decorators
+                const perpX = -dirY;
+                const perpY = dirX;
+
+                // Move perpendicular to the line slightly from the midpoint for the two circles
+                const offsetDist = 2.0; // percentage distance
+                const pairX1 = midX - (perpX * offsetDist);
+                const pairY1 = midY - (perpY * offsetDist);
+                const pairX2 = midX + (perpX * offsetDist);
+                const pairY2 = midY + (perpY * offsetDist);
+
+                return (
+                  <g key={pair}>
+                    <line
+                      x1={`${x1}%`}
+                      y1={`${y1}%`}
+                      x2={`${x2}%`}
+                      y2={`${y2}%`}
+                      className={lineClass}
+                      style={lineStyle}
+                    />
+
+                    {/* Decorators */}
+                    {permanentEdge?.type === 'FULL_MOON' && (
+                      <circle
+                        cx={`${midX}%`}
+                        cy={`${midY}%`}
+                        className="fill-yellow-400 stroke-yellow-400 stroke-[2] sm:stroke-[3] drop-shadow-[0_0_8px_rgba(250,204,21,1)] [r:4px] sm:[r:6px] md:[r:7px]"
+                      />
+                    )}
+                    {permanentEdge?.type === 'PAIR' && (
+                      <>
+                        <circle
+                          cx={`${pairX1}%`}
+                          cy={`${pairY1}%`}
+                          className="fill-transparent stroke-blue-400 stroke-[1.5px] sm:stroke-[2px] md:stroke-[3px] drop-shadow-[0_0_8px_rgba(59,130,246,1)] [r:3px] sm:[r:5px] md:[r:6px]"
+                        />
+                        <circle
+                          cx={`${pairX2}%`}
+                          cy={`${pairY2}%`}
+                          className="fill-transparent stroke-blue-400 stroke-[1.5px] sm:stroke-[2px] md:stroke-[3px] drop-shadow-[0_0_8px_rgba(59,130,246,1)] [r:3px] sm:[r:5px] md:[r:6px]"
+                        />
+                      </>
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* Node Render Loop */}
+            {gameState.layout.nodes.map(node => {
+              const isValid = selectedCardId ? isValidPlacement(node.id) : false;
+              const isHovered = hoveredNodeId === node.id;
+
+              const nodeHighlights = highlightedNodes.filter(hn => hn.nodeId === node.id).map(hn => hn.type);
+              const isChain = nodeHighlights.includes('CHAIN');
+              const isFullMoon = nodeHighlights.includes('FULL_MOON');
+              const isPair = nodeHighlights.includes('PAIR');
+
+              let ringColor = '';
+              if (isChain) ringColor = 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.8)]';
+              else if (isFullMoon) ringColor = 'border-yellow-300 shadow-[0_0_30px_rgba(253,224,71,1)]';
+              else if (isPair) ringColor = 'border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.8)]';
 
               const themeStyle = THEME_STYLES[gameState.layout.theme || 'indigo'];
 
-              let lineClass = shouldBeActiveLine ? `${themeStyle.lineActive} stroke-[2] sm:stroke-[3]` : `${themeStyle.lineInactive} stroke-[1.5px] sm:stroke-[2px] stroke-dasharray-[4,4]`;
-              let lineStyle: React.CSSProperties = { transition: 'all 1s' };
-
-              if (permanentEdge) {
-                if (permanentEdge.type === 'CHAIN') {
-                  lineClass = 'stroke-purple-400 stroke-[3] sm:stroke-[5] drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]';
-                } else if (permanentEdge.type === 'FULL_MOON') {
-                  lineClass = 'stroke-yellow-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
-                } else if (permanentEdge.type === 'PAIR') {
-                  lineClass = 'stroke-blue-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
-                }
-              }
-
-              // Highlight overrides permanent styling temporarily during animations
-              if (isHighlighted && highlightEdge) {
-                if (highlightEdge.type === 'CHAIN') {
-                  lineClass = 'stroke-yellow-400 stroke-[3] sm:stroke-[5] drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]';
-                  lineStyle = { strokeDasharray: '100', animation: 'dash 0.4s linear forwards' };
-                }
-                else if (highlightEdge.type === 'FULL_MOON') lineClass = 'stroke-yellow-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
-                else if (highlightEdge.type === 'PAIR') lineClass = 'stroke-blue-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
-              }
-
-              // Calculate positions for decorators
-              const x1 = n1.position.x;
-              const y1 = n1.position.y;
-              const x2 = n2.position.x;
-              const y2 = n2.position.y;
-
-              const midX = (x1 + x2) / 2;
-              const midY = (y1 + y2) / 2;
-
-              // Pair decorators (two empty circles) requires calculating a perpendicular offset
-              const dx = x2 - x1;
-              const dy = y2 - y1;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              const dirX = dx / dist; // normalized direction vector
-              const dirY = dy / dist;
-
-              // Perpendicular vector for pair decorators
-              const perpX = -dirY;
-              const perpY = dirX;
-
-              // Move perpendicular to the line slightly from the midpoint for the two circles
-              const offsetDist = 2.0; // percentage distance
-              const pairX1 = midX - (perpX * offsetDist);
-              const pairY1 = midY - (perpY * offsetDist);
-              const pairX2 = midX + (perpX * offsetDist);
-              const pairY2 = midY + (perpY * offsetDist);
-
               return (
-                <g key={pair}>
-                  <line
-                    x1={`${x1}%`}
-                    y1={`${y1}%`}
-                    x2={`${x2}%`}
-                    y2={`${y2}%`}
-                    className={lineClass}
-                    style={lineStyle}
-                  />
-
-                  {/* Decorators */}
-                  {permanentEdge?.type === 'FULL_MOON' && (
-                    <circle
-                      cx={`${midX}%`}
-                      cy={`${midY}%`}
-                      className="fill-yellow-400 stroke-yellow-400 stroke-[2] sm:stroke-[3] drop-shadow-[0_0_8px_rgba(250,204,21,1)] [r:4px] sm:[r:6px] md:[r:7px]"
-                    />
-                  )}
-                  {permanentEdge?.type === 'PAIR' && (
-                    <>
-                      <circle
-                        cx={`${pairX1}%`}
-                        cy={`${pairY1}%`}
-                        className="fill-transparent stroke-blue-400 stroke-[1.5px] sm:stroke-[2px] md:stroke-[3px] drop-shadow-[0_0_8px_rgba(59,130,246,1)] [r:3px] sm:[r:5px] md:[r:6px]"
-                      />
-                      <circle
-                        cx={`${pairX2}%`}
-                        cy={`${pairY2}%`}
-                        className="fill-transparent stroke-blue-400 stroke-[1.5px] sm:stroke-[2px] md:stroke-[3px] drop-shadow-[0_0_8px_rgba(59,130,246,1)] [r:3px] sm:[r:5px] md:[r:6px]"
-                      />
-                    </>
-                  )}
-                </g>
-              );
-            })}
-          </svg>
-
-          {/* Node Render Loop */}
-          {gameState.layout.nodes.map(node => {
-            const isValid = selectedCardId ? isValidPlacement(node.id) : false;
-            const isHovered = hoveredNodeId === node.id;
-
-            const nodeHighlights = highlightedNodes.filter(hn => hn.nodeId === node.id).map(hn => hn.type);
-            const isChain = nodeHighlights.includes('CHAIN');
-            const isFullMoon = nodeHighlights.includes('FULL_MOON');
-            const isPair = nodeHighlights.includes('PAIR');
-
-            let ringColor = '';
-            if (isChain) ringColor = 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.8)]';
-            else if (isFullMoon) ringColor = 'border-yellow-300 shadow-[0_0_30px_rgba(253,224,71,1)]';
-            else if (isPair) ringColor = 'border-blue-400 shadow-[0_0_20px_rgba(59,130,246,0.8)]';
-
-            const themeStyle = THEME_STYLES[gameState.layout.theme || 'indigo'];
-
-            return (
-              <DroppableNode
-                key={node.id}
-                node={node}
-                isValid={isValid}
-                isHovered={isHovered}
-                onClick={() => handleNodeClick(node.id)}
-                onDrop={(cardId) => handleNodeClick(node.id, cardId, false)}
-                onDragEnter={() => setHoveredNodeId(node.id)}
-                onDragLeave={() => setHoveredNodeId(null)}
-              >
-                {!node.card && (
-                  <div className={`
+                <DroppableNode
+                  key={node.id}
+                  node={node}
+                  isValid={isValid}
+                  isHovered={isHovered}
+                  onClick={() => handleNodeClick(node.id)}
+                  onDrop={(cardId) => handleNodeClick(node.id, cardId, false)}
+                  onDragEnter={() => setHoveredNodeId(node.id)}
+                  onDragLeave={() => setHoveredNodeId(null)}
+                >
+                  {!node.card && (
+                    <div className={`
                        absolute inset-0 rounded-[8px] border-2 transition-all duration-300
                        ${isValid && isHovered ? 'border-green-300 bg-green-400/20 scale-105 border-solid' : isValid ? 'border-green-400 bg-green-500/10 shadow-[0_0_30px_rgba(74,222,128,0.5)] animate-pulse border-solid' : `${themeStyle.nodeBorder} bg-[#141428] border-dashed`}
                      `}>
-                    <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${themeStyle.nodeDot}`}></div>
-                  </div>
-                )}
+                      <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${themeStyle.nodeDot}`}></div>
+                    </div>
+                  )}
 
-                {node.card && (
-                  <div id={`card-wrapper-${node.id}`} className={`absolute inset-0 w-full h-full animate-in zoom-in spin-in-1`}>
-                    <MoonCard card={node.card} />
-                  </div>
-                )}
+                  {node.card && (
+                    <div id={`card-wrapper-${node.id}`} className={`absolute inset-0 w-full h-full animate-in zoom-in spin-in-1`}>
+                      <MoonCard card={node.card} />
+                    </div>
+                  )}
 
-                {isHovered && isValid && selectedCardId && !node.card && (
-                  <div className="absolute inset-0 w-full h-full opacity-40 scale-90 pointer-events-none z-0">
-                    <MoonCard card={gameState.playerHand.find(c => c.id === selectedCardId)!} />
-                  </div>
-                )}
+                  {isHovered && isValid && selectedCardId && !node.card && (
+                    <div className="absolute inset-0 w-full h-full opacity-40 scale-90 pointer-events-none z-0">
+                      <MoonCard card={gameState.playerHand.find(c => c.id === selectedCardId)!} />
+                    </div>
+                  )}
 
-                {ringColor && (
-                  <div className={`absolute -inset-2 rounded-2xl border-4 pointer-events-none animate-in zoom-in spin-in-2 ${ringColor} z-20`}></div>
-                )}
-              </DroppableNode>
-            );
-          })}
+                  {ringColor && (
+                    <div className={`absolute -inset-2 rounded-2xl border-4 pointer-events-none animate-in zoom-in spin-in-2 ${ringColor} z-20`}></div>
+                  )}
+                </DroppableNode>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* BOTTOM: PLAYER AREA */}
-      <div className="w-full max-w-5xl flex flex-col items-center justify-end gap-2 sm:gap-4 md:gap-6 h-[18vh] sm:h-[20vh] z-30 pb-4">
+      <div className="w-full max-w-5xl flex flex-col items-center justify-end gap-2 sm:gap-4 md:gap-6 z-30 shrink-0">
 
         {/* Player Hand */}
         <div className="flex gap-2 sm:gap-4 md:gap-6 justify-center z-20">
