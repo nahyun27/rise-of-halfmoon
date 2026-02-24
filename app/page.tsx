@@ -8,6 +8,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { aiTurn } from "../utils/ai";
 import { LEVEL_LAYOUTS } from "../constants/layouts";
 import { TutorialOverlay } from "../components/TutorialOverlay";
+import { LevelIntro } from "../components/LevelIntro";
+
+const LEVEL_NAMES: Record<number, string> = {
+  1: 'MARCH',
+  2: 'APRIL',
+  3: 'MAY',
+  4: 'JUNE',
+  5: 'JULY',
+  6: 'AUGUST',
+  7: 'SEPTEMBER',
+  8: 'OCTOBER',
+  9: 'NOVEMBER',
+  10: 'DECEMBER'
+};
 
 const THEME_STYLES: Record<string, { bg: string, border: string, shadow: string, lineActive: string, lineInactive: string, nodeBorder: string, nodeDot: string }> = {
   blue: { bg: 'bg-blue-950/[0.05]', border: 'border-blue-500/10', shadow: 'shadow-[inner_0_0_100px_rgba(30,58,136,0.8)]', lineActive: 'stroke-blue-400', lineInactive: 'stroke-blue-800/40', nodeBorder: 'border-blue-500/20', nodeDot: 'bg-blue-500/50' },
@@ -484,7 +498,7 @@ export default function Home() {
     if (next < LEVEL_LAYOUTS.length) {
       setCurrentLevelIndex(next);
       localStorage.setItem('halfmoon_currentLevel', next.toString());
-      resetGameToLevel(next, 'playing');
+      resetGameToLevel(next, 'levelIntro');
     } else {
       // Beat all levels! Loop to 0
       setCurrentLevelIndex(0);
@@ -496,7 +510,7 @@ export default function Home() {
   const handleRetryGame = () => {
     setCurrentLevelIndex(0);
     localStorage.setItem('halfmoon_currentLevel', '0');
-    resetGameToLevel(0, 'playing');
+    resetGameToLevel(0, 'levelIntro');
   };
 
   const startGame = () => {
@@ -504,7 +518,7 @@ export default function Home() {
     if (!seenTut || seenTut === 'false') {
       setGameState(prev => ({ ...prev, phase: 'tutorial' }));
     } else {
-      setGameState(prev => ({ ...prev, phase: 'playing' }));
+      setGameState(prev => ({ ...prev, phase: 'levelIntro' }));
     }
   };
 
@@ -522,7 +536,7 @@ export default function Home() {
 
   const finishTutorial = () => {
     localStorage.setItem('halfmoon_hasSeenTutorial', 'true');
-    setGameState(prev => ({ ...prev, phase: 'playing' }));
+    setGameState(prev => ({ ...prev, phase: 'levelIntro' }));
   };
 
   useEffect(() => {
@@ -733,7 +747,9 @@ export default function Home() {
         }));
       }, maxDelay);
 
-    } else if (otherEvents.length > 0) {
+    }
+
+    if (otherEvents.length > 0) {
       playSimpleChime();
 
       otherEvents.forEach((event: ScoringEvent, i: number) => {
@@ -759,6 +775,17 @@ export default function Home() {
   // --------------------------------------------------------------------------
   // SCREENS
   // --------------------------------------------------------------------------
+
+  if (gameState.phase === 'levelIntro') {
+    return (
+      <LevelIntro
+        levelNumber={currentLevelIndex + 1}
+        levelName={LEVEL_NAMES[currentLevelIndex + 1] || 'UNKNOWN'}
+        onComplete={() => setGameState(prev => ({ ...prev, phase: 'playing' }))}
+        onSkip={() => setGameState(prev => ({ ...prev, phase: 'playing' }))}
+      />
+    );
+  }
 
   if (gameState.phase === 'start') {
     return (
