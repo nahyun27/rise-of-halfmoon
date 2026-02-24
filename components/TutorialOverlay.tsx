@@ -20,12 +20,12 @@ const MiniNode = ({ card, highlight = false, connected = false }: { card: MoonCa
     {connected && (
       <div className="absolute top-1/2 left-[-40px] w-[40px] h-0.5 bg-indigo-500/50 -z-10"></div>
     )}
-    <div className={`w-[60px] h-[90px] rounded-xl border-2 flex items-center justify-center transition-all duration-500
-      ${card ? 'border-transparent' : highlight ? 'border-green-400 bg-green-500/10 shadow-[0_0_20px_rgba(74,222,128,0.4)] animate-pulse' : 'border-indigo-500/20 bg-black/40 border-dashed'}
+    <div className={`w-[60px] h-[75px] rounded-[6px] border-2 flex items-center justify-center transition-all duration-500
+      ${card ? 'border-transparent' : highlight ? 'border-green-400 bg-green-500/10 shadow-[0_0_20px_rgba(74,222,128,0.4)] animate-pulse border-solid' : 'border-indigo-500/20 bg-[#141428] border-dashed'}
     `}>
       {!card && <div className="w-2 h-2 rounded-full bg-indigo-500/50"></div>}
       {card && (
-        <div className="absolute inset-0 max-w-[60px] max-h-[60px] rounded-xl overflow-hidden scale-[0.75] origin-top-left -ml-1.5 mt-2">
+        <div className="absolute inset-0 max-w-[60px] max-h-[75px] rounded-[6px] overflow-hidden scale-[0.75] origin-top-left">
           <MoonCard card={card} />
         </div>
       )}

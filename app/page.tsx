@@ -79,7 +79,7 @@ export default function Home() {
     setHasMounted(true);
     const savedLevel = localStorage.getItem('halfmoon_currentLevel');
     const savedBest = localStorage.getItem('halfmoon_bestLevel');
-    
+
     let startLvl = 0;
     let startBest = 1;
     if (savedLevel) startLvl = parseInt(savedLevel, 10);
@@ -145,10 +145,10 @@ export default function Home() {
       localStorage.setItem('halfmoon_currentLevel', next.toString());
       resetGameToLevel(next, 'playing');
     } else {
-       // Beat all levels! Loop to 0
-       setCurrentLevelIndex(0);
-       localStorage.setItem('halfmoon_currentLevel', '0');
-       resetGameToLevel(0, 'start');
+      // Beat all levels! Loop to 0
+      setCurrentLevelIndex(0);
+      localStorage.setItem('halfmoon_currentLevel', '0');
+      resetGameToLevel(0, 'start');
     }
   };
 
@@ -276,9 +276,9 @@ export default function Home() {
 
     const newHand = [...handToUse];
     const newDrawPile = [...drawPileToUse];
-    
+
     newHand.splice(selectedCardIndex, 1);
-    
+
     if (newDrawPile.length > 0) {
       newHand.push(newDrawPile.shift()!);
     }
@@ -323,21 +323,21 @@ export default function Home() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-[#0a0a1a] text-white selection:bg-indigo-500/30">
         <div className="border border-indigo-500/30 rounded-3xl p-12 bg-indigo-950/20 shadow-[0_0_50px_rgba(49,46,129,0.5)] backdrop-blur-sm max-w-lg w-full flex flex-col items-center gap-8">
-           <h1 className="text-4xl font-black tracking-widest text-center text-indigo-300 drop-shadow-[0_0_10px_rgba(165,180,252,0.8)] flex items-center gap-4 uppercase">
-              🌙 Rise of the<br/>Half Moon
-           </h1>
-           <div className="w-full flex flex-col gap-4 mt-4">
-              <button onClick={startGame} className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 font-bold uppercase tracking-wider hover:brightness-125 transition-all outline-none">
-                 🎮 Start Game
-              </button>
-              <button onClick={openTutorial} className="w-full py-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 font-bold uppercase tracking-wider hover:bg-indigo-900/60 transition-all outline-none text-indigo-200">
-                 📖 How to Play
-              </button>
-           </div>
-           <div className="text-indigo-400 font-mono tracking-widest text-sm flex gap-8 mt-4">
-              <span>Current Level: {currentLevelIndex + 1}</span>
-              <span>Best Level: {bestLevelReached}</span>
-           </div>
+          <h1 className="text-4xl font-black tracking-widest text-center text-indigo-300 drop-shadow-[0_0_10px_rgba(165,180,252,0.8)] flex items-center gap-4 uppercase">
+            🌙 Rise of the<br />Half Moon
+          </h1>
+          <div className="w-full flex flex-col gap-4 mt-4">
+            <button onClick={startGame} className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 font-bold uppercase tracking-wider hover:brightness-125 transition-all outline-none">
+              🎮 Start Game
+            </button>
+            <button onClick={openTutorial} className="w-full py-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 font-bold uppercase tracking-wider hover:bg-indigo-900/60 transition-all outline-none text-indigo-200">
+              📖 How to Play
+            </button>
+          </div>
+          <div className="text-indigo-400 font-mono tracking-widest text-sm flex gap-8 mt-4">
+            <span>Current Level: {currentLevelIndex + 1}</span>
+            <span>Best Level: {bestLevelReached}</span>
+          </div>
         </div>
       </div>
     );
@@ -347,29 +347,29 @@ export default function Home() {
     return (
       <div className="flex min-h-screen items-center justify-center p-8 bg-[#0a0a1a] text-white">
         <div className="border border-green-500/30 rounded-3xl p-12 bg-green-950/20 shadow-[0_0_50px_rgba(20,83,45,0.8)] backdrop-blur-sm max-w-lg w-full flex flex-col items-center gap-6">
-           <h2 className="text-3xl font-black text-green-400 tracking-widest uppercase drop-shadow-[0_0_10px_rgba(74,222,128,0.8)]">
-              LEVEL COMPLETE! 🎉
-           </h2>
-           <div className="text-xl font-bold tracking-widest text-green-200 uppercase">
-              Level {currentLevelIndex + 1}: {LEVEL_LAYOUTS[currentLevelIndex].name}
-           </div>
+          <h2 className="text-3xl font-black text-green-400 tracking-widest uppercase drop-shadow-[0_0_10px_rgba(74,222,128,0.8)]">
+            LEVEL COMPLETE! 🎉
+          </h2>
+          <div className="text-xl font-bold tracking-widest text-green-200 uppercase">
+            Level {currentLevelIndex + 1}: {LEVEL_LAYOUTS[currentLevelIndex].name}
+          </div>
 
-           <div className="flex flex-col w-full gap-2 my-6 font-mono text-lg bg-black/40 p-6 rounded-xl border border-green-900/50">
-              <div className="flex justify-between text-green-300">
-                <span>You:</span> <span>{gameState.playerScore} points</span>
-              </div>
-              <div className="flex justify-between text-red-300">
-                <span>Half Moon:</span> <span>{gameState.opponentScore} points</span>
-              </div>
-           </div>
+          <div className="flex flex-col w-full gap-2 my-6 font-mono text-lg bg-black/40 p-6 rounded-xl border border-green-900/50">
+            <div className="flex justify-between text-green-300">
+              <span>You:</span> <span>{gameState.playerScore} points</span>
+            </div>
+            <div className="flex justify-between text-red-300">
+              <span>Half Moon:</span> <span>{gameState.opponentScore} points</span>
+            </div>
+          </div>
 
-           <div className="text-4xl font-black text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.8)] animate-pulse mb-4">
-              YOU WIN!
-           </div>
+          <div className="text-4xl font-black text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.8)] animate-pulse mb-4">
+            YOU WIN!
+          </div>
 
-           <button onClick={handleNextLevel} className="w-full py-4 rounded-xl bg-green-600 hover:bg-green-500 font-bold uppercase tracking-wider transition-all outline-none">
-              ➡️ NEXT LEVEL
-           </button>
+          <button onClick={handleNextLevel} className="w-full py-4 rounded-xl bg-green-600 hover:bg-green-500 font-bold uppercase tracking-wider transition-all outline-none">
+            ➡️ NEXT LEVEL
+          </button>
         </div>
       </div>
     );
@@ -379,33 +379,33 @@ export default function Home() {
     return (
       <div className="flex min-h-screen items-center justify-center p-8 bg-[#0a0a1a] text-white">
         <div className="border border-red-500/30 rounded-3xl p-12 bg-red-950/20 shadow-[0_0_50px_rgba(153,27,27,0.8)] backdrop-blur-sm max-w-lg w-full flex flex-col items-center gap-6">
-           <h2 className="text-3xl font-black text-red-500 tracking-widest uppercase drop-shadow-[0_0_10px_rgba(2ef,68,68,0.8)]">
-              GAME OVER 💔
-           </h2>
-           <div className="text-xl font-bold tracking-widest text-red-300 uppercase">
-              Level {currentLevelIndex + 1}: {LEVEL_LAYOUTS[currentLevelIndex].name}
-           </div>
+          <h2 className="text-3xl font-black text-red-500 tracking-widest uppercase drop-shadow-[0_0_10px_rgba(2ef,68,68,0.8)]">
+            GAME OVER 💔
+          </h2>
+          <div className="text-xl font-bold tracking-widest text-red-300 uppercase">
+            Level {currentLevelIndex + 1}: {LEVEL_LAYOUTS[currentLevelIndex].name}
+          </div>
 
-           <div className="flex flex-col w-full gap-2 my-6 font-mono text-lg bg-black/40 p-6 rounded-xl border border-red-900/50">
-              <div className="flex justify-between text-green-300">
-                <span>You:</span> <span>{gameState.playerScore} points</span>
-              </div>
-              <div className="flex justify-between text-red-400 font-bold">
-                <span>Half Moon:</span> <span>{gameState.opponentScore} points</span>
-              </div>
-           </div>
+          <div className="flex flex-col w-full gap-2 my-6 font-mono text-lg bg-black/40 p-6 rounded-xl border border-red-900/50">
+            <div className="flex justify-between text-green-300">
+              <span>You:</span> <span>{gameState.playerScore} points</span>
+            </div>
+            <div className="flex justify-between text-red-400 font-bold">
+              <span>Half Moon:</span> <span>{gameState.opponentScore} points</span>
+            </div>
+          </div>
 
-           <div className="text-3xl font-black text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] mb-2">
-              HALF MOON WINS
-           </div>
-           
-           <div className="text-sm font-mono text-red-300/60 mb-6 uppercase tracking-widest">
-              Returning to Level 1...
-           </div>
+          <div className="text-3xl font-black text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] mb-2">
+            HALF MOON WINS
+          </div>
 
-           <button onClick={handleRetryGame} className="w-full py-4 rounded-xl bg-red-900 border border-red-500 hover:bg-red-800 hover:border-red-400 font-bold uppercase tracking-wider transition-all outline-none shadow-[0_0_20px_rgba(220,38,38,0.3)]">
-              🔄 TRY AGAIN
-           </button>
+          <div className="text-sm font-mono text-red-300/60 mb-6 uppercase tracking-widest">
+            Returning to Level 1...
+          </div>
+
+          <button onClick={handleRetryGame} className="w-full py-4 rounded-xl bg-red-900 border border-red-500 hover:bg-red-800 hover:border-red-400 font-bold uppercase tracking-wider transition-all outline-none shadow-[0_0_20px_rgba(220,38,38,0.3)]">
+            🔄 TRY AGAIN
+          </button>
         </div>
       </div>
     );
@@ -423,53 +423,49 @@ export default function Home() {
   // GAME PLAYING PHASE
   return (
     <div className="flex min-h-screen flex-col items-center justify-between py-8 px-8 bg-[#0a0a1a] text-white font-sans selection:bg-indigo-500/30">
-      
+
       {gameState.phase === 'tutorial' && (
         <TutorialOverlay onClose={finishTutorial} />
       )}
 
       {/* TOP: OPPONENT AREA */}
-      <div className="w-full max-w-5xl flex flex-col items-center gap-4">
-         <div className="w-full flex justify-between items-center px-8 py-3 bg-gradient-to-r from-red-950/30 to-black/60 border border-red-500/20 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.05)] relative overflow-hidden">
-             <div className="text-xl font-bold tracking-widest text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10 w-32">OPPONENT</div>
-             
-             {isOpponentThinking && (
-               <div className="absolute inset-0 flex items-center justify-center bg-red-950/40 backdrop-blur-sm z-0">
-                 <div className="text-red-300 font-mono tracking-[0.3em] flex items-center gap-2 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]">
-                   THINKING
-                   <span className="flex gap-1 ml-2">
-                     <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
-                     <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
-                     <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
-                   </span>
-                 </div>
-               </div>
-             )}
+      <div className="w-full max-w-5xl flex flex-col items-center gap-6">
+        <div className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-red-950/30 to-black/60 border border-red-500/20 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.05)] relative overflow-hidden">
+          <div className="flex flex-col">
+            <div className="text-2xl font-black tracking-widest text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10">OPPONENT</div>
+            <div className="text-sm font-bold tracking-widest text-red-500/50 uppercase mt-1">Level {gameState.layout.levelNumber}: {gameState.layout.name}</div>
+          </div>
 
-             <div className="flex gap-8 items-center justify-end z-10 w-32 opacity-80" style={{ opacity: isOpponentThinking ? 0.2 : 0.8 }}>
-                <span className="text-lg font-mono text-gray-300">{gameState.opponentScore} PTS</span>
-                <span className="text-xl drop-shadow-[0_0_5px_rgba(220,38,38,0.8)]">{'❤️'.repeat(gameState.opponentHealth)}</span>
-             </div>
-         </div>
-         
-         {/* AI Face-down Cards */}
-         <div className="flex gap-4 h-[100px] items-center justify-center -mb-8 z-20">
-             {gameState.opponentHand.map(card => (
-                <div key={card.id} className="pointer-events-none transform hover:scale-105 transition-transform duration-300 shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
-                   <MoonCard card={card} isFaceDown={true} />
-                </div>
-             ))}
-         </div>
+          {isOpponentThinking && (
+            <div className="absolute inset-0 flex items-center justify-center bg-red-950/40 backdrop-blur-sm z-0">
+              <div className="text-red-300 font-mono tracking-[0.3em] flex items-center gap-2 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]">
+                THINKING
+                <span className="flex gap-1 ml-2">
+                  <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
+                  <span className="animate-bounce" style={{ animationDelay: '150ms' }}>.</span>
+                  <span className="animate-bounce" style={{ animationDelay: '300ms' }}>.</span>
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col items-end justify-center z-10 opacity-80" style={{ opacity: isOpponentThinking ? 0.2 : 0.8 }}>
+            <span className="text-2xl font-mono text-gray-200 font-bold">{gameState.opponentScore} PTS</span>
+          </div>
+        </div>
+
+        {/* AI Face-down Cards */}
+        <div className="flex gap-6 justify-center z-20">
+          {gameState.opponentHand.map(card => (
+            <div key={card.id} className="pointer-events-none transform shadow-[0_10px_20px_rgba(0,0,0,0.5)]">
+              <MoonCard card={card} isFaceDown={true} />
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* MIDDLE: GRAPH BOARD */}
       <div className="flex flex-col items-center gap-4 w-full max-w-5xl relative flex-grow justify-center my-4">
-        {/* Level Controls / Header overlay above board visually */}
-        <div className="w-full flex justify-between px-6 text-sm font-bold tracking-[0.2em] text-indigo-400/50 absolute top-4 z-20 pointer-events-none">
-           <span className="tracking-widest capitalize">LEVEL {gameState.layout.levelNumber}: {gameState.layout.name}</span>
-           <span>DECK: {gameState.playerDrawPile.length}</span>
-        </div>
-
         {/* Score Popups overlay */}
         {scorePopups.map((popup) => {
           const targetNode = gameState.layout.nodes.find(n => n.id === popup.nodeId);
@@ -565,7 +561,7 @@ export default function Home() {
                 onMouseEnter={() => setHoveredNodeId(node.id)}
                 onMouseLeave={() => setHoveredNodeId(null)}
                 className={`
-                   absolute transform -translate-x-1/2 -translate-y-1/2 w-[80px] h-[80px] rounded-full z-10 flex flex-col items-center justify-center transition-all duration-300
+                   absolute transform -translate-x-1/2 -translate-y-1/2 w-[80px] h-[100px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
                    ${node.card ? 'cursor-default' : isValid && selectedCardId ? 'cursor-pointer' : selectedCardId ? 'cursor-not-allowed opacity-50 saturate-0' : 'cursor-default opacity-80'}
                  `}
                 style={{
@@ -575,10 +571,10 @@ export default function Home() {
               >
                 {!node.card && (
                   <div className={`
-                       absolute inset-0 rounded-full border-2 transition-all duration-300
-                       ${isValid && selectedCardId ? 'border-green-400 bg-green-500/10 shadow-[0_0_30px_rgba(74,222,128,0.5)] animate-pulse' : `${themeStyle.nodeBorder} bg-black/40 border-dashed`}
+                       absolute inset-0 rounded-[8px] border-2 transition-all duration-300
+                       ${isValid && selectedCardId ? 'border-green-400 bg-green-500/10 shadow-[0_0_30px_rgba(74,222,128,0.5)] animate-pulse border-solid' : `${themeStyle.nodeBorder} bg-[#141428] border-dashed`}
                        ${!isValid && selectedCardId ? 'border-red-500/20 bg-red-900/10' : ''}
-                       ${isHovered && isValid && selectedCardId ? 'border-green-300 bg-green-400/20 scale-105' : ''}
+                       ${isHovered && isValid && selectedCardId ? 'border-green-300 bg-green-400/20 scale-105 border-solid' : ''}
                      `}>
                     <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full ${themeStyle.nodeDot}`}></div>
                   </div>
@@ -595,7 +591,7 @@ export default function Home() {
                     <MoonCard card={gameState.playerHand.find(c => c.id === selectedCardId)!} />
                   </div>
                 )}
-                
+
                 {ringColor && (
                   <div className={`absolute -inset-2 rounded-2xl border-4 pointer-events-none animate-in zoom-in spin-in-2 ${ringColor} z-20`}></div>
                 )}
@@ -607,37 +603,39 @@ export default function Home() {
       </div>
 
       {/* BOTTOM: PLAYER AREA */}
-      <div className="w-full max-w-5xl flex flex-col items-center gap-4">
-          
-         {/* Player Hand */}
-         <div className="flex gap-6 h-[100px] items-center justify-center -mt-8 z-20">
-             {gameState.playerHand.map((card, index) => {
-               const isSelected = selectedCardId === card.id;
-               return (
-                  <div
-                     key={card.id} 
-                     className={`transform transition-all duration-300 shadow-[0_10px_20px_rgba(0,0,0,0.5)] ${isSelected ? '-translate-y-6 scale-110' : 'hover:-translate-y-2 hover:scale-105'}`}
-                  >
-                     <MoonCard 
-                        card={card} 
-                        onClick={() => {
-                           if (gameState.currentTurn === 'player') {
-                              setSelectedCardId(isSelected ? null : card.id);
-                           }
-                        }} 
-                     />
-                  </div>
-               )
-             })}
-         </div>
+      <div className="w-full max-w-5xl flex flex-col items-center gap-6">
 
-         <div className="w-full flex justify-between items-center px-8 py-3 bg-gradient-to-r from-blue-950/30 to-black/60 border border-indigo-500/20 rounded-2xl shadow-[0_0_20px_rgba(99,102,241,0.05)] relative overflow-hidden">
-             <div className="text-xl font-bold tracking-widest text-indigo-400 drop-shadow-[0_0_8px_rgba(165,180,252,0.5)] z-10 w-32">YOU</div>
-             <div className="flex gap-8 items-center justify-end z-10 w-32">
-                <span className="text-lg font-mono text-gray-300">{gameState.playerScore} PTS</span>
-                <span className="text-xl drop-shadow-[0_0_5px_rgba(220,38,38,0.8)]">{'❤️'.repeat(gameState.playerHealth)}</span>
-             </div>
-         </div>
+        {/* Player Hand */}
+        <div className="flex gap-6 justify-center z-20">
+          {gameState.playerHand.map((card, index) => {
+            const isSelected = selectedCardId === card.id;
+            return (
+              <div
+                key={card.id}
+                className={`transform transition-all duration-300 shadow-[0_10px_20px_rgba(0,0,0,0.5)] ${isSelected ? '-translate-y-6 scale-110' : 'hover:-translate-y-2 hover:scale-105'}`}
+              >
+                <MoonCard
+                  card={card}
+                  onClick={() => {
+                    if (gameState.currentTurn === 'player') {
+                      setSelectedCardId(isSelected ? null : card.id);
+                    }
+                  }}
+                />
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-blue-950/30 to-black/60 border border-indigo-500/20 rounded-2xl shadow-[0_0_20px_rgba(99,102,241,0.05)] relative overflow-hidden">
+          <div className="flex flex-col">
+            <div className="text-2xl font-black tracking-widest text-indigo-400 drop-shadow-[0_0_8px_rgba(165,180,252,0.5)] z-10">YOU</div>
+            <div className="text-sm font-bold tracking-widest text-indigo-500/50 uppercase mt-1">Deck: {gameState.playerDrawPile.length} Cards Left</div>
+          </div>
+          <div className="flex flex-col items-end justify-center z-10">
+            <span className="text-2xl font-mono text-gray-200 font-bold">{gameState.playerScore} PTS</span>
+          </div>
+        </div>
       </div>
     </div>
   );

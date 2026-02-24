@@ -24,8 +24,8 @@ export const MoonCard: React.FC<MoonCardProps> = ({ card, onClick, isFaceDown = 
     <div
       onClick={() => onClick?.(card)}
       className={`
-        group relative w-[80px] h-[80px] 
-        rounded-xl 
+        group relative w-[80px] h-[100px] 
+        rounded-[8px]
         border-[3px]
         flex flex-col items-center justify-between
         pt-2 pb-3 px-2
