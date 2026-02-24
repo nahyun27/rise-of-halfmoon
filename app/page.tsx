@@ -625,6 +625,7 @@ export default function Home() {
     const newPopups: ScorePopupData[] = [];
     const newHighlightNodes: HighlightNode[] = [];
     const newHighlightEdges: HighlightEdge[] = [];
+    const newScoredEdges: { id1: string, id2: string, type: HighlightType }[] = [...(gameState.layout.scoredEdges || [])];
 
     events.forEach((event: ScoringEvent) => {
       if (event.owner === 'player') addedPlayerScore += event.points;
@@ -646,6 +647,15 @@ export default function Home() {
           targetNode.card.scoredBy = event.owner;
         }
       });
+
+      // Save permanent edges
+      if (event.type === 'CHAIN') {
+        for (let i = 0; i < event.nodeIds.length - 1; i++) {
+          newScoredEdges.push({ id1: event.nodeIds[i], id2: event.nodeIds[i + 1], type: 'CHAIN' });
+        }
+      } else {
+        newScoredEdges.push({ id1: event.nodeIds[0], id2: event.nodeIds[1], type: event.type });
+      }
     });
 
     const newHand = [...handToUse];
@@ -656,7 +666,7 @@ export default function Home() {
     // Apply immediate game state (board + hands)
     setGameState(prev => ({
       ...prev,
-      layout: { ...prev.layout, nodes: newNodes },
+      layout: { ...prev.layout, nodes: newNodes, scoredEdges: newScoredEdges },
       playerHand: isAiTurn ? prev.playerHand : newHand,
       playerDrawPile: isAiTurn ? prev.playerDrawPile : newDrawPile,
       opponentHand: isAiTurn ? newHand : prev.opponentHand,
@@ -1055,12 +1065,27 @@ export default function Home() {
               const isHighlighted = highlightedEdges.find(e => (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1));
               const highlightEdge = highlightedEdges.find(e => (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1));
 
+              const permanentEdge = gameState.layout.scoredEdges?.find(e =>
+                (e.id1 === id1 && e.id2 === id2) || (e.id1 === id2 && e.id2 === id1)
+              );
+
               const isOccupied = n1.card !== null && n2.card !== null;
               const themeStyle = THEME_STYLES[gameState.layout.theme || 'indigo'];
 
               let lineClass = isOccupied ? `${themeStyle.lineActive} stroke-[3]` : `${themeStyle.lineInactive} stroke-[2] stroke-dasharray-[4,4]`;
               let lineStyle: React.CSSProperties = { transition: 'all 1s' };
 
+              if (permanentEdge) {
+                if (permanentEdge.type === 'CHAIN') {
+                  lineClass = 'stroke-purple-400 stroke-[5] drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]';
+                } else if (permanentEdge.type === 'FULL_MOON') {
+                  lineClass = 'stroke-yellow-400 stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
+                } else if (permanentEdge.type === 'PAIR') {
+                  lineClass = 'stroke-blue-400 stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
+                }
+              }
+
+              // Highlight overrides permanent styling temporarily during animations
               if (isHighlighted && highlightEdge) {
                 if (highlightEdge.type === 'CHAIN') {
                   lineClass = 'stroke-yellow-400 stroke-[5] drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]';
@@ -1070,16 +1095,66 @@ export default function Home() {
                 else if (highlightEdge.type === 'PAIR') lineClass = 'stroke-blue-400 stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
               }
 
+              // Calculate positions for decorators
+              const x1 = n1.position.x;
+              const y1 = n1.position.y;
+              const x2 = n2.position.x;
+              const y2 = n2.position.y;
+
+              const midX = (x1 + x2) / 2;
+              const midY = (y1 + y2) / 2;
+
+              // Pair decorators (two empty circles) requires calculating a perpendicular offset
+              const dx = x2 - x1;
+              const dy = y2 - y1;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              const dirX = dx / dist; // normalized direction vector
+              const dirY = dy / dist;
+
+              // Move along the line slightly from the midpoint for the two circles
+              const offsetDist = 1.2; // percentage distance
+              const pairX1 = midX - (dirX * offsetDist);
+              const pairY1 = midY - (dirY * offsetDist);
+              const pairX2 = midX + (dirX * offsetDist);
+              const pairY2 = midY + (dirY * offsetDist);
+
               return (
-                <line
-                  key={pair}
-                  x1={`${n1.position.x}%`}
-                  y1={`${n1.position.y}%`}
-                  x2={`${n2.position.x}%`}
-                  y2={`${n2.position.y}%`}
-                  className={lineClass}
-                  style={lineStyle}
-                />
+                <g key={pair}>
+                  <line
+                    x1={`${x1}%`}
+                    y1={`${y1}%`}
+                    x2={`${x2}%`}
+                    y2={`${y2}%`}
+                    className={lineClass}
+                    style={lineStyle}
+                  />
+
+                  {/* Decorators */}
+                  {permanentEdge?.type === 'FULL_MOON' && (
+                    <circle
+                      cx={`${midX}%`}
+                      cy={`${midY}%`}
+                      r="7"
+                      className="fill-white stroke-yellow-400 stroke-[3] drop-shadow-[0_0_8px_rgba(250,204,21,1)]"
+                    />
+                  )}
+                  {permanentEdge?.type === 'PAIR' && (
+                    <>
+                      <circle
+                        cx={`${pairX1}%`}
+                        cy={`${pairY1}%`}
+                        r="6"
+                        className="fill-transparent stroke-blue-200 stroke-[3] drop-shadow-[0_0_8px_rgba(59,130,246,1)]"
+                      />
+                      <circle
+                        cx={`${pairX2}%`}
+                        cy={`${pairY2}%`}
+                        r="6"
+                        className="fill-transparent stroke-blue-200 stroke-[3] drop-shadow-[0_0_8px_rgba(59,130,246,1)]"
+                      />
+                    </>
+                  )}
+                </g>
               );
             })}
           </svg>

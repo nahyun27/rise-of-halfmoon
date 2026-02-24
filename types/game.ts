@@ -19,6 +19,7 @@ export interface BoardLayout {
   name: string;
   theme: 'blue' | 'purple' | 'green' | 'red' | 'indigo' | 'yellow';
   nodes: BoardNode[];
+  scoredEdges?: { id1: string, id2: string, type: 'PAIR' | 'FULL_MOON' | 'CHAIN' }[];
 }
 
 export interface GameState {
