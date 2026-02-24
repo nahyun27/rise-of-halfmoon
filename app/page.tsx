@@ -5,6 +5,7 @@ import { MoonCard } from "../components/MoonCard";
 import { MoonCard as MoonCardType, GameState, BoardNode } from "../types/game";
 import { evaluateGraphPlacement, ScoringEvent } from "../utils/scoring";
 import { LEVEL_LAYOUTS } from "../constants/layouts";
+import { TutorialOverlay } from "../components/TutorialOverlay";
 
 interface ScorePopupData {
   id: string;
@@ -14,6 +15,7 @@ interface ScorePopupData {
 }
 
 export default function Home() {
+  const [showTutorial, setShowTutorial] = useState(true);
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
   const currentLayout = LEVEL_LAYOUTS[currentLevelIndex];
 
@@ -163,6 +165,14 @@ export default function Home() {
             </button>
             <span>LEVEL {gameState.layout.levelNumber}: {gameState.layout.name.toUpperCase()}</span>
           </div>
+
+          <button
+            onClick={() => setShowTutorial(true)}
+            className="w-10 h-10 flex items-center justify-center rounded-full border border-indigo-500/30 hover:bg-indigo-500/20 transition text-lg font-black text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+            title="How to Play"
+          >
+            ?
+          </button>
         </div>
 
         {/* Score Popups overlay */}
@@ -325,6 +335,9 @@ export default function Home() {
         </div>
 
       </div>
+
+      {/* Tutorial Overlay */}
+      {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
     </div>
   );
 }
