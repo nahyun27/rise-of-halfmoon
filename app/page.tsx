@@ -1152,27 +1152,27 @@ export default function Home() {
 
               const themeStyle = THEME_STYLES[gameState.layout.theme || 'indigo'];
 
-              let lineClass = shouldBeActiveLine ? `${themeStyle.lineActive} stroke-[3]` : `${themeStyle.lineInactive} stroke-[2] stroke-dasharray-[4,4]`;
+              let lineClass = shouldBeActiveLine ? `${themeStyle.lineActive} stroke-[2] sm:stroke-[3]` : `${themeStyle.lineInactive} stroke-[1.5px] sm:stroke-[2px] stroke-dasharray-[4,4]`;
               let lineStyle: React.CSSProperties = { transition: 'all 1s' };
 
               if (permanentEdge) {
                 if (permanentEdge.type === 'CHAIN') {
-                  lineClass = 'stroke-purple-400 stroke-[5] drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]';
+                  lineClass = 'stroke-purple-400 stroke-[3] sm:stroke-[5] drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]';
                 } else if (permanentEdge.type === 'FULL_MOON') {
-                  lineClass = 'stroke-yellow-400 stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
+                  lineClass = 'stroke-yellow-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
                 } else if (permanentEdge.type === 'PAIR') {
-                  lineClass = 'stroke-blue-400 stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
+                  lineClass = 'stroke-blue-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
                 }
               }
 
               // Highlight overrides permanent styling temporarily during animations
               if (isHighlighted && highlightEdge) {
                 if (highlightEdge.type === 'CHAIN') {
-                  lineClass = 'stroke-yellow-400 stroke-[5] drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]';
+                  lineClass = 'stroke-yellow-400 stroke-[3] sm:stroke-[5] drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]';
                   lineStyle = { strokeDasharray: '100', animation: 'dash 0.4s linear forwards' };
                 }
-                else if (highlightEdge.type === 'FULL_MOON') lineClass = 'stroke-yellow-400 stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
-                else if (highlightEdge.type === 'PAIR') lineClass = 'stroke-blue-400 stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
+                else if (highlightEdge.type === 'FULL_MOON') lineClass = 'stroke-yellow-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
+                else if (highlightEdge.type === 'PAIR') lineClass = 'stroke-blue-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
               }
 
               // Calculate positions for decorators
@@ -1218,7 +1218,7 @@ export default function Home() {
                     <circle
                       cx={`${midX}%`}
                       cy={`${midY}%`}
-                      className="fill-white stroke-yellow-400 stroke-[2] sm:stroke-[3] drop-shadow-[0_0_8px_rgba(250,204,21,1)] [r:4px] sm:[r:6px] md:[r:7px]"
+                      className="fill-yellow-400 stroke-yellow-400 stroke-[2] sm:stroke-[3] drop-shadow-[0_0_8px_rgba(250,204,21,1)] [r:4px] sm:[r:6px] md:[r:7px]"
                     />
                   )}
                   {permanentEdge?.type === 'PAIR' && (
@@ -1226,12 +1226,12 @@ export default function Home() {
                       <circle
                         cx={`${pairX1}%`}
                         cy={`${pairY1}%`}
-                        className="fill-transparent stroke-blue-200 stroke-[1.5px] sm:stroke-[2px] md:stroke-[3px] drop-shadow-[0_0_8px_rgba(59,130,246,1)] [r:3px] sm:[r:5px] md:[r:6px]"
+                        className="fill-transparent stroke-blue-400 stroke-[1.5px] sm:stroke-[2px] md:stroke-[3px] drop-shadow-[0_0_8px_rgba(59,130,246,1)] [r:3px] sm:[r:5px] md:[r:6px]"
                       />
                       <circle
                         cx={`${pairX2}%`}
                         cy={`${pairY2}%`}
-                        className="fill-transparent stroke-blue-200 stroke-[1.5px] sm:stroke-[2px] md:stroke-[3px] drop-shadow-[0_0_8px_rgba(59,130,246,1)] [r:3px] sm:[r:5px] md:[r:6px]"
+                        className="fill-transparent stroke-blue-400 stroke-[1.5px] sm:stroke-[2px] md:stroke-[3px] drop-shadow-[0_0_8px_rgba(59,130,246,1)] [r:3px] sm:[r:5px] md:[r:6px]"
                       />
                     </>
                   )}

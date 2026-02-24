@@ -66,10 +66,13 @@ const DemoPlacement = () => (
 
 const DemoPhasePair = () => (
   <div className="flex flex-col items-center my-4 sm:my-8 gap-4 sm:gap-6 z-10 w-full">
-    <div className="flex items-center gap-4 sm:gap-6 md:gap-8 relative">
-      <div className="absolute top-1/2 left-[20px] sm:left-[30px] md:left-[40px] right-[20px] sm:right-[30px] md:right-[40px] h-1 bg-indigo-500/50 -z-10" />
+    <div className="flex items-center relative gap-8 sm:gap-12 md:gap-16">
+      <div className="absolute top-1/2 left-[20px] right-[20px] h-[3px] bg-gradient-to-r from-transparent via-blue-400 to-transparent -translate-y-1/2 -z-10" />
       <TutorialCard phase={1} />
-      <div className="text-2xl sm:text-3xl md:text-4xl text-indigo-400 font-black drop-shadow-[0_0_8px_rgba(99,102,241,0.8)] z-10 mx-[-4px] sm:mx-[-8px]">—</div>
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-between h-8 sm:h-10 z-10 pointer-events-none">
+        <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-[#111122] border-[2px] sm:border-[2.5px] border-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,1)]"></div>
+        <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-[#111122] border-[2px] sm:border-[2.5px] border-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,1)]"></div>
+      </div>
       <TutorialCard phase={1} />
     </div>
     <div className="animate-bounce text-xl sm:text-2xl font-black text-yellow-300 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] mt-2 uppercase tracking-widest">
@@ -80,25 +83,25 @@ const DemoPhasePair = () => (
 
 const DemoFullMoon = () => (
   <div className="flex flex-col items-center my-4 sm:my-8 gap-4 sm:gap-6 z-10 w-full">
-    <div className="flex items-center gap-4 sm:gap-6 md:gap-8 relative">
-      <div className="absolute top-1/2 left-[20px] sm:left-[30px] md:left-[40px] right-[20px] sm:right-[30px] md:right-[40px] h-1 bg-indigo-500/50 -z-10" />
+    <div className="flex items-center relative gap-8 sm:gap-12 md:gap-16">
+      <div className="absolute top-1/2 left-[20px] right-[20px] h-[3px] bg-gradient-to-r from-transparent via-yellow-400 to-transparent -translate-y-1/2 -z-10" />
       <TutorialCard phase={1} />
-      <div className="text-2xl sm:text-3xl md:text-4xl text-indigo-400 font-black drop-shadow-[0_0_8px_rgba(99,102,241,0.8)] z-10 mx-[-4px] sm:mx-[-8px]">+</div>
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-yellow-400 border-[3px] border-yellow-400 z-10 drop-shadow-[0_0_8px_rgba(250,204,21,1)]"></div>
       <TutorialCard phase={5} />
     </div>
     <div className="animate-bounce text-xl sm:text-2xl font-black text-yellow-300 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] mt-2 uppercase tracking-widest">
       +2 Full Moon!
     </div>
     <div className="text-xs sm:text-sm md:text-base font-mono text-indigo-200/60 tracking-widest bg-indigo-950/40 px-3 sm:px-6 py-1 sm:py-2 rounded-xl mt-2 border border-indigo-500/20">
-      🌑+🌕 | 🌒+🌖 | 🌓+🌗 | 🌔+🌘
+      🌑 🌕 | 🌒 🌖 | 🌓 🌗 | 🌔 🌘
     </div>
   </div>
 );
 
 const DemoChain = () => (
   <div className="flex flex-col items-center my-4 sm:my-8 gap-3 sm:gap-4 md:gap-6 z-10 w-full">
-    <div className="flex items-center gap-2 sm:gap-4 md:gap-6 relative">
-      <div className="absolute top-1/2 left-[15px] sm:left-[30px] md:left-[40px] right-[15px] sm:right-[30px] md:right-[40px] h-1 bg-indigo-500/50 -z-10" />
+    <div className="flex items-center relative gap-4 sm:gap-6 md:gap-8">
+      <div className="absolute top-1/2 left-[15px] sm:left-[30px] md:left-[40px] right-[15px] sm:right-[30px] md:right-[40px] h-[3px] bg-purple-500 -translate-y-1/2 -z-10 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
       <div className="relative"><TutorialCard phase={0} /><div className="absolute -inset-1 sm:-inset-2 rounded-xl border-[2px] sm:border-[3px] border-yellow-300 pointer-events-none shadow-[0_0_20px_rgba(253,224,71,0.6)] z-20"></div></div>
       <div className="relative"><TutorialCard phase={1} /><div className="absolute -inset-1 sm:-inset-2 rounded-xl border-[2px] sm:border-[3px] border-yellow-300 pointer-events-none shadow-[0_0_20px_rgba(253,224,71,0.6)] z-20"></div></div>
       <div className="relative"><TutorialCard phase={2} /><div className="absolute -inset-1 sm:-inset-2 rounded-xl border-[2px] sm:border-[3px] border-yellow-300 pointer-events-none shadow-[0_0_20px_rgba(253,224,71,0.6)] z-20"></div></div>
@@ -112,9 +115,9 @@ const DemoChain = () => (
 
 const DemoSteal = () => (
   <div className="flex flex-col items-center my-4 sm:my-8 gap-4 sm:gap-8 z-10 w-full">
-    <div className="flex items-center gap-2 sm:gap-4 md:gap-6 relative">
-      <div className="absolute top-1/2 left-[15px] sm:left-[30px] md:left-[40px] right-[40px] sm:right-[70px] md:right-[100px] h-1 bg-indigo-500/50 -z-10" />
-      <div className="absolute top-1/2 left-[180px] sm:left-[210px] md:left-[250px] right-[15px] sm:right-[30px] md:right-[40px] h-1 bg-red-500 -z-10" />
+    <div className="flex items-center relative gap-4 sm:gap-6 md:gap-8">
+      <div className="absolute top-1/2 left-[15px] sm:left-[30px] md:left-[40px] right-[40px] sm:right-[70px] md:right-[100px] h-[3px] bg-purple-500 -translate-y-1/2 -z-10 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
+      <div className="absolute top-1/2 left-[180px] sm:left-[210px] md:left-[250px] right-[15px] sm:right-[30px] md:right-[40px] h-[3px] bg-red-500 -translate-y-1/2 -z-10 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
 
       <div className="relative">
         <div className="absolute -top-4 sm:-top-6 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs text-red-400 font-bold tracking-widest w-[60px] sm:w-[80px] text-center bg-red-950/90 px-1 py-0.5 sm:px-2 sm:py-1 rounded border border-red-500/50 whitespace-nowrap z-30">STOLEN</div>
@@ -181,7 +184,7 @@ const tutorialSteps = [
     content: (
       <div className="text-left w-full sm:w-4/5 mx-auto">
         <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 leading-relaxed mb-2 sm:mb-4 tracking-wide">
-          Match identical moon phases directly connected to each other to score exactly <strong className="text-yellow-300">+1 point</strong>.
+          Match <strong className="text-indigo-300">identical moon phases</strong> directly connected to score exactly <strong className="text-yellow-300">+1 point</strong>.
         </p>
         <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 leading-relaxed tracking-wide">
           E.g., Waxing Crescent + Waxing Crescent = 1 Point!
@@ -206,7 +209,7 @@ const tutorialSteps = [
     content: (
       <div className="text-left w-full sm:w-4/5 mx-auto">
         <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 leading-relaxed mb-2 sm:mb-4 tracking-wide">
-          The most powerful move. Connect 3 or more phases in chronological order (<strong className="text-yellow-300">0&rarr;1&rarr;2</strong> or <strong className="text-yellow-300">7&rarr;0&rarr;1</strong>).
+          The most powerful move. Connect 3 or more phases in chronological order (<strong className="text-yellow-300">🌑&rarr;🌒&rarr;🌓</strong> or <strong className="text-yellow-300">🌘&rarr;🌑&rarr;🌒</strong>).
         </p>
         <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 leading-relaxed tracking-wide">
           You will score points equal to the <strong className="text-yellow-300">entire length of the chain</strong> you just completed. (a 4-card chain = 4 points!).
