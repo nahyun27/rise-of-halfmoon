@@ -64,7 +64,7 @@ const generateDeck = (size: number, owner: 'player' | 'opponent'): MoonCardType[
 const INITIAL_DECK_SIZE = 30; // 3 in hand, 27 in draw pile.
 
 // ------------- AUDIO FUNCTIONS -------------
-function playSimpleChime() {
+function playPairSound() {
   try {
     const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const osc = ctx.createOscillator();
@@ -78,6 +78,23 @@ function playSimpleChime() {
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.3);
+  } catch (e) { }
+}
+
+function playFullMoonSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.setValueAtTime(800, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(1600, ctx.currentTime + 0.15);
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.4);
   } catch (e) { }
 }
 
@@ -345,7 +362,7 @@ function DroppableNode({ node, children, isValid, isHovered, onClick, onDrop, on
       onDragLeave={onDragLeave}
       onDrop={handleDrop}
       className={`
-         absolute transform -translate-x-1/2 -translate-y-1/2 w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] md:w-[80px] md:h-[80px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
+         absolute transform -translate-x-1/2 -translate-y-1/2 w-[40px] h-[40px] sm:w-[60px] sm:h-[60px] md:w-[80px] md:h-[80px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
          ${isHovered && isValid ? 'scale-110' : ''}
          ${node.card ? 'cursor-default' : isValid ? 'cursor-pointer' : 'cursor-default opacity-80'}
        `}
@@ -453,7 +470,7 @@ export default function Home() {
         for (let i = 0; i < opponentNodes.length; i++) {
           const node = opponentNodes[i];
           setHighlightedNodes(prev => [...prev, { nodeId: node.id, type: 'PAIR' }]);
-          playSimpleChime();
+          playPairSound();
           currentOpponentScore += 1;
           setGameState(prev => ({ ...prev, opponentScore: prev.opponentScore + 1 }));
           await delay(300);
@@ -466,7 +483,7 @@ export default function Home() {
         for (let i = 0; i < playerNodes.length; i++) {
           const node = playerNodes[i];
           setHighlightedNodes(prev => [...prev, { nodeId: node.id, type: 'FULL_MOON' }]);
-          playSimpleChime();
+          playFullMoonSound();
           currentPlayerScore += 1;
           setGameState(prev => ({ ...prev, playerScore: prev.playerScore + 1 }));
           await delay(300);
@@ -690,7 +707,7 @@ export default function Home() {
       chainEvents.forEach((chainEv, evIndex) => {
         const cLength = chainEv.nodeIds.length;
         totalChainPoints += chainEv.points;
-        const chainStartTime = evIndex * 2000;
+        const chainStartTime = evIndex * (cLength * 400 + 1000);
 
         if (chainEvents.length > 1) {
           setTimeout(() => {
@@ -704,25 +721,50 @@ export default function Home() {
 
         const startIndex = chainEv.nodeIds.indexOf(nodeId) !== -1 ? chainEv.nodeIds.indexOf(nodeId) : 0;
 
+        // Let the max possible distance be the chain length - 1. We want the animation to *end* at the placed card (distance 0 originally).
+        // So the new distance is (max possible distance for this chain) - (distance from placed card).
+
+        let localMaxDist = 0;
         chainEv.nodeIds.forEach((id, i) => {
-          const distance = Math.abs(i - startIndex);
+          const d = Math.abs(i - startIndex);
+          if (d > localMaxDist) localMaxDist = d;
+        });
+
+        chainEv.nodeIds.forEach((id, i) => {
+          const distFromPlaced = Math.abs(i - startIndex);
+          // Reverse the order: start from the furthest point and move towards the placed card
+          const distance = localMaxDist - distFromPlaced;
+
           setTimeout(() => {
             playChainSound(distance, cLength);
             setHighlightedNodes(prev => [...prev, { nodeId: id, type: 'CHAIN' }]);
 
-            const cardEl = document.getElementById(`card-wrapper-${id}`);
-            if (cardEl) {
-              cardEl.style.animation = 'chainPulse 0.4s ease-out';
-              setTimeout(() => { if (cardEl) cardEl.style.animation = ''; }, 400);
+            const nodeEl = document.getElementById(`node-${id}`);
+            if (nodeEl) {
+              const isPlaced = id === nodeId;
+              nodeEl.animate([
+                { transform: 'scale(1)', boxShadow: '0 0 0px rgba(168,85,247,0)', borderColor: 'transparent', zIndex: 10 },
+                { transform: `scale(${isPlaced ? 1.05 : 1.05})`, boxShadow: `0 0 ${isPlaced ? '40px' : '30px'} rgba(168,85,247,1)`, borderColor: '#a855f7', zIndex: 50 },
+                { transform: `scale(${isPlaced ? 1.02 : 1.02})`, boxShadow: `0 0 ${isPlaced ? '25px' : '20px'} rgba(168,85,247,0.8)`, borderColor: '#a855f7', zIndex: 30 }
+              ], {
+                duration: 600,
+                easing: 'ease-out',
+                fill: 'forwards'
+              });
+
+              // Clear animation formatting
+              setTimeout(() => {
+                if (nodeEl) nodeEl.style.transform = '';
+              }, 2600);
             }
 
             if (i < cLength - 1) {
               setHighlightedEdges(prev => [...prev, { id1: id, id2: chainEv.nodeIds[i + 1], type: 'CHAIN' }]);
             }
-          }, distance * 250 + chainStartTime);
+          }, distance * 400 + chainStartTime);
         });
 
-        const burstTime = Math.max(startIndex, cLength - 1 - startIndex) * 250 + 400 + chainStartTime;
+        const burstTime = localMaxDist * 400 + 400 + chainStartTime;
         if (burstTime > maxDelay) maxDelay = burstTime;
 
         setTimeout(() => {
@@ -760,9 +802,35 @@ export default function Home() {
     }
 
     if (otherEvents.length > 0) {
-      playSimpleChime();
-
       otherEvents.forEach((event: ScoringEvent, i: number) => {
+        if (event.type === 'PAIR') {
+          playPairSound();
+          event.nodeIds.forEach(id => {
+            const nodeEl = document.getElementById(`node-${id}`);
+            if (nodeEl) {
+              nodeEl.animate([
+                { transform: 'scale(1)', boxShadow: '0 0 0px rgba(59,130,246,0)', borderColor: 'transparent', zIndex: 10 },
+                { transform: 'scale(1.05)', boxShadow: '0 0 25px rgba(59,130,246,1)', borderColor: '#3b82f6', zIndex: 50 },
+                { transform: 'scale(1)', boxShadow: '0 0 10px rgba(59,130,246,0.5)', borderColor: '#3b82f6', zIndex: 10 }
+              ], { duration: 400, easing: 'ease-out' });
+            }
+          });
+        } else if (event.type === 'FULL_MOON') {
+          playFullMoonSound();
+          event.nodeIds.forEach((id, idx) => {
+            setTimeout(() => {
+              const nodeEl = document.getElementById(`node-${id}`);
+              if (nodeEl) {
+                nodeEl.animate([
+                  { transform: 'scale(1) rotate(0deg)', boxShadow: '0 0 0px rgba(250,204,21,0)', filter: 'brightness(1)', zIndex: 10 },
+                  { transform: 'scale(1.05) rotate(5deg)', boxShadow: '0 0 35px rgba(250,204,21,1)', filter: 'brightness(1.5)', zIndex: 50 },
+                  { transform: 'scale(1.02) rotate(0deg)', boxShadow: '0 0 20px rgba(250,204,21,0.8)', filter: 'brightness(1.2)', zIndex: 30 }
+                ], { duration: 500, easing: 'ease-out' });
+              }
+            }, idx * 100);
+          });
+        }
+
         event.nodeIds.forEach((id: string) => newHighlightNodes.push({ nodeId: id, type: event.type as HighlightType }));
         newHighlightEdges.push({ id1: event.nodeIds[0], id2: event.nodeIds[1], type: event.type as HighlightType });
         newPopups.push({ id: `popup-${Date.now()}-${i}`, points: event.points, type: event.type as HighlightType, nodeId: nodeId, owner: event.owner });
@@ -941,7 +1009,7 @@ export default function Home() {
         )}
 
         {/* TOP: HALF MOON AREA */}
-        <div className="w-full flex justify-between items-center px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 flex-row bg-gradient-to-r from-red-950/30 to-black/60 border border-red-500/20 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.05)] relative overflow-hidden">
+        <div className="shrink-0 w-full flex justify-between items-center px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 flex-row bg-gradient-to-r from-red-950/30 to-black/60 border border-red-500/20 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.05)] relative overflow-hidden">
           <div className="flex flex-col">
             <div className="text-sm sm:text-lg md:text-2xl font-black tracking-widest text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10">HALF MOON</div>
           </div>
@@ -959,13 +1027,20 @@ export default function Home() {
             </div>
           )}
 
-          <div className="flex flex-col items-end justify-center z-10 opacity-80" style={{ opacity: aiActionState.phase !== 'idle' ? 0.2 : 0.8 }}>
-            <span className="text-sm sm:text-xl md:text-2xl font-mono text-gray-200 font-bold">{gameState.opponentScore} PTS</span>
-          </div>
+          <motion.div
+            key={gameState.opponentScore}
+            initial={{ scale: 1 }}
+            animate={{ scale: [1, 1.3, 1], color: ['#e5e7eb', '#f87171', '#e5e7eb'], textShadow: ['0 0 0px rgba(248,113,113,0)', '0 0 20px rgba(248,113,113,0.8)', '0 0 0px rgba(248,113,113,0)'] }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="flex flex-col items-end justify-center z-10 opacity-80"
+            style={{ opacity: aiActionState.phase !== 'idle' ? 0.2 : 0.8 }}
+          >
+            <span className="text-sm sm:text-xl md:text-2xl font-mono font-bold">{gameState.opponentScore} PTS</span>
+          </motion.div>
         </div>
 
         {/* AI Face-down Cards */}
-        <div className="flex gap-3 sm:gap-4 md:gap-6 justify-center z-20 h-[60px] sm:h-[70px] md:h-[80px] items-center">
+        <div className="flex gap-2 sm:gap-4 md:gap-6 justify-center z-20 h-[50px] sm:h-[60px] md:h-[80px] items-center">
           {gameState.opponentHand.map(card => {
             const isActing = aiActionState.cardId === card.id;
             const aiCardPlayVariants = {
@@ -1003,8 +1078,8 @@ export default function Home() {
           else if (popup.type === 'FULL_MOON') textColor = 'text-yellow-300 drop-shadow-[0_4px_4px_rgba(253,224,71,0.8)]';
           else if (popup.type === 'PAIR') textColor = 'text-blue-300 drop-shadow-[0_4px_4px_rgba(59,130,246,0.8)]';
 
-          const xDir = popup.owner === 'player' ? -50 : 50;
-          const yDir = popup.owner === 'player' ? 300 : -300;
+          const yDir = popup.owner === 'player' ? (typeof window !== 'undefined' ? window.innerHeight / 2 : 400) : -(typeof window !== 'undefined' ? window.innerHeight / 2 : 400);
+          const xDir = popup.owner === 'player' ? 0 : 0; // Fly straight vertically into the bounds
 
           return (
             <motion.div
@@ -1012,11 +1087,11 @@ export default function Home() {
               initial={{ opacity: 0, scale: 0.5, y: 0, x: 0 }}
               animate={{
                 opacity: [0, 1, 1, 0],
-                scale: [0.5, 1.2, 1, 0.5],
-                y: [0, -20, yDir],
+                scale: [0.5, 1.5, 1.2, 0.8],
+                y: [0, -30, yDir],
                 x: [0, 0, xDir]
               }}
-              transition={{ duration: 2.0, times: [0, 0.2, 0.7, 1], ease: "easeInOut" }}
+              transition={{ duration: 1.5, times: [0, 0.15, 0.4, 1], ease: "easeInOut" }}
               className="absolute z-50 pointer-events-none drop-shadow-[0_0_10px_rgba(255,255,255,0.8)]"
               style={{
                 left: `calc(${targetNode.position.x}% - 20px)`,
@@ -1048,7 +1123,7 @@ export default function Home() {
         )}
 
         {/* Game Board Container */}
-        <div className={`w-full max-w-4xl h-[450px] sm:h-[450px] md:h-[550px] rounded-2xl md:rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95 scale-90 sm:scale-95 md:scale-100 my-auto flex items-center justify-center
+        <div className={`w-full max-w-[350px] sm:max-w-[450px] md:max-w-[550px] aspect-square rounded-2xl md:rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95 my-auto flex items-center justify-center
            ${THEME_STYLES[gameState.layout.theme || 'indigo'].bg} 
            ${THEME_STYLES[gameState.layout.theme || 'indigo'].border} 
            ${THEME_STYLES[gameState.layout.theme || 'indigo'].shadow}
@@ -1070,9 +1145,14 @@ export default function Home() {
               );
 
               const isOccupied = n1.card !== null && n2.card !== null;
+
+              // If both nodes have cards but no relationship, fall back to the inactive dashed line
+              const noRelationship = isOccupied && !permanentEdge && !isHighlighted;
+              const shouldBeActiveLine = isOccupied && !noRelationship;
+
               const themeStyle = THEME_STYLES[gameState.layout.theme || 'indigo'];
 
-              let lineClass = isOccupied ? `${themeStyle.lineActive} stroke-[3]` : `${themeStyle.lineInactive} stroke-[2] stroke-dasharray-[4,4]`;
+              let lineClass = shouldBeActiveLine ? `${themeStyle.lineActive} stroke-[3]` : `${themeStyle.lineInactive} stroke-[2] stroke-dasharray-[4,4]`;
               let lineStyle: React.CSSProperties = { transition: 'all 1s' };
 
               if (permanentEdge) {
@@ -1111,12 +1191,16 @@ export default function Home() {
               const dirX = dx / dist; // normalized direction vector
               const dirY = dy / dist;
 
-              // Move along the line slightly from the midpoint for the two circles
-              const offsetDist = 1.2; // percentage distance
-              const pairX1 = midX - (dirX * offsetDist);
-              const pairY1 = midY - (dirY * offsetDist);
-              const pairX2 = midX + (dirX * offsetDist);
-              const pairY2 = midY + (dirY * offsetDist);
+              // Perpendicular vector for pair decorators
+              const perpX = -dirY;
+              const perpY = dirX;
+
+              // Move perpendicular to the line slightly from the midpoint for the two circles
+              const offsetDist = 2.0; // percentage distance
+              const pairX1 = midX - (perpX * offsetDist);
+              const pairY1 = midY - (perpY * offsetDist);
+              const pairX2 = midX + (perpX * offsetDist);
+              const pairY2 = midY + (perpY * offsetDist);
 
               return (
                 <g key={pair}>
@@ -1134,8 +1218,7 @@ export default function Home() {
                     <circle
                       cx={`${midX}%`}
                       cy={`${midY}%`}
-                      r="7"
-                      className="fill-white stroke-yellow-400 stroke-[3] drop-shadow-[0_0_8px_rgba(250,204,21,1)]"
+                      className="fill-white stroke-yellow-400 stroke-[2] sm:stroke-[3] drop-shadow-[0_0_8px_rgba(250,204,21,1)] [r:4px] sm:[r:6px] md:[r:7px]"
                     />
                   )}
                   {permanentEdge?.type === 'PAIR' && (
@@ -1143,14 +1226,12 @@ export default function Home() {
                       <circle
                         cx={`${pairX1}%`}
                         cy={`${pairY1}%`}
-                        r="6"
-                        className="fill-transparent stroke-blue-200 stroke-[3] drop-shadow-[0_0_8px_rgba(59,130,246,1)]"
+                        className="fill-transparent stroke-blue-200 stroke-[1.5px] sm:stroke-[2px] md:stroke-[3px] drop-shadow-[0_0_8px_rgba(59,130,246,1)] [r:3px] sm:[r:5px] md:[r:6px]"
                       />
                       <circle
                         cx={`${pairX2}%`}
                         cy={`${pairY2}%`}
-                        r="6"
-                        className="fill-transparent stroke-blue-200 stroke-[3] drop-shadow-[0_0_8px_rgba(59,130,246,1)]"
+                        className="fill-transparent stroke-blue-200 stroke-[1.5px] sm:stroke-[2px] md:stroke-[3px] drop-shadow-[0_0_8px_rgba(59,130,246,1)] [r:3px] sm:[r:5px] md:[r:6px]"
                       />
                     </>
                   )}
@@ -1221,7 +1302,7 @@ export default function Home() {
       <div className="w-full max-w-5xl flex flex-col items-center justify-end gap-2 sm:gap-4 md:gap-6 h-[18vh] sm:h-[20vh] z-30 pb-4">
 
         {/* Player Hand */}
-        <div className="flex gap-3 sm:gap-4 md:gap-6 justify-center z-20">
+        <div className="flex gap-2 sm:gap-4 md:gap-6 justify-center z-20">
           {gameState.playerHand.map((card, index) => {
             const isSelected = selectedCardId === card.id;
             return (
@@ -1242,13 +1323,19 @@ export default function Home() {
           })}
         </div>
 
-        <div className="w-full flex justify-between items-center px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 flex-row bg-gradient-to-r from-blue-950/30 to-black/60 border border-indigo-500/20 rounded-2xl shadow-[0_0_20px_rgba(99,102,241,0.05)] relative overflow-hidden">
+        <div className="shrink-0 w-full flex justify-between items-center px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 flex-row bg-gradient-to-r from-blue-950/30 to-black/60 border border-indigo-500/20 rounded-2xl shadow-[0_0_20px_rgba(99,102,241,0.05)] relative overflow-hidden">
           <div className="flex flex-col">
             <div className="text-sm sm:text-lg md:text-2xl font-black tracking-widest text-indigo-400 drop-shadow-[0_0_8px_rgba(165,180,252,0.5)] z-10">YOU</div>
           </div>
-          <div className="flex flex-col items-end justify-center z-10">
-            <span className="text-sm sm:text-xl md:text-2xl font-mono text-gray-200 font-bold">{gameState.playerScore} PTS</span>
-          </div>
+          <motion.div
+            key={gameState.playerScore}
+            initial={{ scale: 1 }}
+            animate={{ scale: [1, 1.3, 1], color: ['#e5e7eb', '#818cf8', '#e5e7eb'], textShadow: ['0 0 0px rgba(129,140,248,0)', '0 0 20px rgba(129,140,248,0.8)', '0 0 0px rgba(129,140,248,0)'] }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="flex flex-col items-end justify-center z-10"
+          >
+            <span className="text-sm sm:text-xl md:text-2xl font-mono font-bold">{gameState.playerScore} PTS</span>
+          </motion.div>
         </div>
       </div>
     </div>

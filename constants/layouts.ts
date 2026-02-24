@@ -80,7 +80,7 @@ export const LEVEL_1_MARCH: BoardLayout = {
   levelNumber: 1,
   name: "March",
   theme: "blue",
-  nodes: createGridLayout(3, 3, 30, 20, 20, 30) // 3x3 grid centered
+  nodes: createGridLayout(3, 3, 20, 20, 30, 30) // 3x3 grid centered
 };
 
 export const LEVEL_2_APRIL: BoardLayout = {

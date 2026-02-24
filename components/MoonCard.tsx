@@ -26,7 +26,7 @@ export const MoonCard: React.FC<MoonCardProps> = ({ card, onClick, isFaceDown = 
     <div
       onClick={() => onClick?.(card)}
       className={`
-        group relative w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] md:w-[80px] md:h-[80px]
+        group relative w-[40px] h-[40px] sm:w-[60px] sm:h-[60px] md:w-[80px] md:h-[80px]
         rounded-[8px]
         border-[3px]
         flex items-center justify-center
@@ -49,7 +49,7 @@ export const MoonCard: React.FC<MoonCardProps> = ({ card, onClick, isFaceDown = 
           🌙
         </div>
       ) : (
-        <div className="text-[20px] sm:text-[28px] md:text-[38px] filter drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-transform duration-300 group-hover:scale-110 flex-grow flex items-center justify-center">
+        <div className="text-[20px] sm:text-[32px] md:text-[38px] filter drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-transform duration-300 group-hover:scale-110 flex-grow flex items-center justify-center">
           {MOON_EMOJIS[card.phase]}
         </div>
       )}
