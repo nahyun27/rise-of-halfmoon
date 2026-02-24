@@ -179,6 +179,64 @@ body {
   height: 8px;
   background: linear-gradient(135deg, #6c63ff, #4d96ff);
   border-radius: 50%;
-  box-shadow: 0 0 20px rgba(108, 99, 255, 0.8);
   transform: translateX(-50%);
+}
+
+/* Mobile Responsive - Level Intro */
+@media (max-width: 640px) {
+  .level-intro-overlay {
+    padding: 16px;
+  }
+
+  .level-label {
+    font-size: 18px;
+    letter-spacing: 6px;
+  }
+
+  .number {
+    font-size: 72px;
+  }
+
+  .level-name {
+    font-size: 20px;
+    letter-spacing: 3px;
+    gap: 12px;
+  }
+
+  .moon-icon {
+    font-size: 32px;
+  }
+
+  .orbit-container {
+    width: 350px;
+    height: 350px;
+  }
+
+  .glow-circle {
+    width: 250px;
+    height: 250px;
+  }
+}
+
+@media (max-width: 768px) {
+  .level-label {
+    font-size: 20px;
+  }
+
+  .number {
+    font-size: 96px;
+  }
+
+  .level-name {
+    font-size: 24px;
+  }
+
+  .moon-icon {
+    font-size: 36px;
+  }
+
+  .orbit-container {
+    width: 400px;
+    height: 400px;
+  }
 }

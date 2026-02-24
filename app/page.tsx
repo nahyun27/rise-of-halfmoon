@@ -228,35 +228,35 @@ function GamePauseMenu({ onResume, onExit, onOpenTutorial, currentLevel, playerS
       animate={{ opacity: 1 }}
       className="fixed inset-0 bg-black/80 backdrop-blur-md z-[1000] flex items-center justify-center"
     >
-      <div className="bg-gradient-to-br from-[#1a1a3e] to-[#0a0a1a] border-2 border-indigo-400/30 rounded-[2rem] p-12 min-w-[400px] text-center shadow-[0_0_50px_rgba(99,102,241,0.2)]">
-        <h2 className="text-4xl font-black text-white mb-10 tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">⏸️ PAUSED</h2>
+      <div className="bg-gradient-to-br from-[#1a1a3e] to-[#0a0a1a] border-2 border-indigo-400/30 rounded-2xl sm:rounded-[2rem] p-6 sm:p-8 md:p-12 min-w-[300px] sm:min-w-[400px] max-w-[95vw] text-center shadow-[0_0_50px_rgba(99,102,241,0.2)]">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-6 sm:mb-8 md:mb-10 tracking-widest drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">⏸️ PAUSED</h2>
 
-        <div className="flex flex-col gap-5 my-8">
+        <div className="flex flex-col gap-3 sm:gap-4 md:gap-5 my-4 sm:my-6 md:my-8">
           <button
             onClick={onResume}
-            className="py-4 px-8 rounded-xl text-lg font-bold uppercase tracking-widest bg-gradient-to-br from-indigo-600 to-purple-600 text-white hover:scale-105 hover:shadow-[0_8px_20px_rgba(99,102,241,0.4)] transition-all border-none outline-none cursor-pointer"
+            className="py-3 px-6 sm:py-4 sm:px-8 rounded-xl text-base sm:text-lg font-bold uppercase tracking-widest bg-gradient-to-br from-indigo-600 to-purple-600 text-white hover:scale-105 hover:shadow-[0_8px_20px_rgba(99,102,241,0.4)] transition-all border-none outline-none cursor-pointer"
           >
             ▶️ Continue
           </button>
 
           <button
             onClick={onOpenTutorial}
-            className="py-4 px-8 rounded-xl text-lg font-bold uppercase tracking-widest bg-indigo-950/40 text-indigo-200 border border-indigo-500/30 hover:bg-indigo-900/60 transition-all outline-none cursor-pointer"
+            className="py-3 px-6 sm:py-4 sm:px-8 rounded-xl text-base sm:text-lg font-bold uppercase tracking-widest bg-indigo-950/40 text-indigo-200 border border-indigo-500/30 hover:bg-indigo-900/60 transition-all outline-none cursor-pointer"
           >
             📖 How to Play
           </button>
 
           <button
             onClick={onExit}
-            className="py-4 px-8 rounded-xl text-lg font-bold uppercase tracking-widest bg-red-500/20 text-red-500 border border-red-500 hover:bg-red-500/30 transition-all outline-none cursor-pointer"
+            className="py-3 px-6 sm:py-4 sm:px-8 rounded-xl text-base sm:text-lg font-bold uppercase tracking-widest bg-red-500/20 text-red-500 border border-red-500 hover:bg-red-500/30 transition-all outline-none cursor-pointer"
           >
             🚪 Exit to Menu
           </button>
         </div>
 
-        <div className="text-indigo-200/80 font-mono tracking-widest mt-8 pt-8 border-t border-indigo-500/30">
-          <p className="mb-2 uppercase text-sm">{currentLevel}</p>
-          <p className="font-bold text-white text-lg">{playerScore} PTS</p>
+        <div className="text-indigo-200/80 font-mono tracking-widest mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-indigo-500/30">
+          <p className="mb-2 uppercase text-xs sm:text-sm">{currentLevel}</p>
+          <p className="font-bold text-white text-base sm:text-lg">{playerScore} PTS</p>
         </div>
       </div>
     </motion.div>
@@ -345,7 +345,7 @@ function DroppableNode({ node, children, isValid, isHovered, onClick, onDrop, on
       onDragLeave={onDragLeave}
       onDrop={handleDrop}
       className={`
-         absolute transform -translate-x-1/2 -translate-y-1/2 w-[80px] h-[100px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
+         absolute transform -translate-x-1/2 -translate-y-1/2 w-[40px] h-[50px] sm:w-[60px] sm:h-[75px] md:w-[80px] md:h-[100px] rounded-[8px] z-10 flex flex-col items-center justify-center transition-all duration-300
          ${isHovered && isValid ? 'scale-110' : ''}
          ${node.card ? 'cursor-default' : isValid ? 'cursor-pointer' : 'cursor-default opacity-80'}
        `}
@@ -799,20 +799,20 @@ export default function Home() {
 
   if (gameState.phase === 'start') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-8 bg-[#0a0a1a] text-white selection:bg-indigo-500/30">
-        <div className="border border-indigo-500/30 rounded-3xl p-12 bg-indigo-950/20 shadow-[0_0_50px_rgba(49,46,129,0.5)] backdrop-blur-sm max-w-lg w-full flex flex-col items-center gap-8">
-          <h1 className="text-4xl font-black tracking-widest text-center text-indigo-300 drop-shadow-[0_0_10px_rgba(165,180,252,0.8)] flex items-center gap-4 uppercase">
+      <div className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 bg-[#0a0a1a] text-white selection:bg-indigo-500/30">
+        <div className="border border-indigo-500/30 rounded-2xl md:rounded-3xl p-6 sm:p-8 md:p-12 bg-indigo-950/20 shadow-[0_0_50px_rgba(49,46,129,0.5)] backdrop-blur-sm max-w-[95vw] sm:max-w-lg w-full flex flex-col items-center gap-6 sm:gap-8">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-widest text-center text-indigo-300 drop-shadow-[0_0_10px_rgba(165,180,252,0.8)] flex items-center gap-2 sm:gap-4 uppercase">
             🌙 Rise of the<br />Half Moon
           </h1>
-          <div className="w-full flex flex-col gap-4 mt-4">
-            <button onClick={startGame} className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 font-bold uppercase tracking-wider hover:brightness-125 transition-all outline-none">
+          <div className="w-full flex flex-col gap-3 sm:gap-4 mt-2 sm:mt-4">
+            <button onClick={startGame} className="w-full py-3 sm:py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 font-bold uppercase tracking-wider hover:brightness-125 transition-all outline-none text-sm sm:text-base md:text-lg">
               🎮 Start Game
             </button>
-            <button onClick={openTutorial} className="w-full py-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 font-bold uppercase tracking-wider hover:bg-indigo-900/60 transition-all outline-none text-indigo-200">
+            <button onClick={openTutorial} className="w-full py-3 sm:py-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 font-bold uppercase tracking-wider hover:bg-indigo-900/60 transition-all outline-none text-indigo-200 text-sm sm:text-base md:text-lg">
               📖 How to Play
             </button>
           </div>
-          <div className="text-indigo-400 font-mono tracking-widest text-sm flex gap-8 mt-4">
+          <div className="text-indigo-400 font-mono tracking-widest text-xs sm:text-sm flex flex-col sm:flex-row gap-2 sm:gap-8 mt-2 sm:mt-4 text-center">
             <span>Current Level: {currentLevelIndex + 1}</span>
             <span>Best Level: {bestLevelReached}</span>
           </div>
@@ -823,16 +823,16 @@ export default function Home() {
 
   if (gameState.phase === 'levelWin') {
     return (
-      <div className="flex min-h-screen items-center justify-center p-8 bg-[#0a0a1a] text-white">
-        <div className="border border-green-500/30 rounded-3xl p-12 bg-green-950/20 shadow-[0_0_50px_rgba(20,83,45,0.8)] backdrop-blur-sm max-w-lg w-full flex flex-col items-center gap-6">
-          <h2 className="text-3xl font-black text-green-400 tracking-widest uppercase drop-shadow-[0_0_10px_rgba(74,222,128,0.8)]">
+      <div className="flex min-h-screen items-center justify-center p-4 sm:p-8 bg-[#0a0a1a] text-white">
+        <div className="border border-green-500/30 rounded-2xl md:rounded-3xl p-6 sm:p-8 md:p-12 bg-green-950/20 shadow-[0_0_50px_rgba(20,83,45,0.8)] backdrop-blur-sm max-w-[95vw] sm:max-w-lg w-full flex flex-col items-center gap-4 sm:gap-6">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-green-400 tracking-widest uppercase drop-shadow-[0_0_10px_rgba(74,222,128,0.8)] text-center">
             LEVEL COMPLETE! 🎉
           </h2>
-          <div className="text-xl font-bold tracking-widest text-green-200 uppercase">
+          <div className="text-sm sm:text-base md:text-xl font-bold tracking-widest text-green-200 uppercase text-center">
             Level {currentLevelIndex + 1}: {LEVEL_LAYOUTS[currentLevelIndex].name}
           </div>
 
-          <div className="flex flex-col w-full gap-2 my-6 font-mono text-lg bg-black/40 p-6 rounded-xl border border-green-900/50">
+          <div className="flex flex-col w-full gap-2 my-4 sm:my-6 font-mono text-base sm:text-lg md:text-xl bg-black/40 p-4 sm:p-6 rounded-xl border border-green-900/50">
             <div className="flex justify-between text-green-300">
               <span>You:</span> <span>{gameState.playerScore} points</span>
             </div>
@@ -841,11 +841,11 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="text-4xl font-black text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.8)] animate-pulse mb-4">
+          <div className="text-2xl sm:text-3xl md:text-4xl font-black text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.8)] animate-pulse mb-2 sm:mb-4">
             YOU WIN!
           </div>
 
-          <button onClick={handleNextLevel} className="w-full py-4 rounded-xl bg-green-600 hover:bg-green-500 font-bold uppercase tracking-wider transition-all outline-none">
+          <button onClick={handleNextLevel} className="w-full py-3 sm:py-4 rounded-xl bg-green-600 hover:bg-green-500 font-bold uppercase tracking-wider transition-all outline-none text-sm sm:text-base md:text-lg">
             ➡️ NEXT LEVEL
           </button>
         </div>
@@ -855,16 +855,16 @@ export default function Home() {
 
   if (gameState.phase === 'gameOver') {
     return (
-      <div className="flex min-h-screen items-center justify-center p-8 bg-[#0a0a1a] text-white">
-        <div className="border border-red-500/30 rounded-3xl p-12 bg-red-950/20 shadow-[0_0_50px_rgba(153,27,27,0.8)] backdrop-blur-sm max-w-lg w-full flex flex-col items-center gap-6">
-          <h2 className="text-3xl font-black text-red-500 tracking-widest uppercase drop-shadow-[0_0_10px_rgba(2ef,68,68,0.8)]">
+      <div className="flex min-h-screen items-center justify-center p-4 sm:p-8 bg-[#0a0a1a] text-white">
+        <div className="border border-red-500/30 rounded-2xl md:rounded-3xl p-6 sm:p-8 md:p-12 bg-red-950/20 shadow-[0_0_50px_rgba(153,27,27,0.8)] backdrop-blur-sm max-w-[95vw] sm:max-w-lg w-full flex flex-col items-center gap-4 sm:gap-6">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-red-500 tracking-widest uppercase drop-shadow-[0_0_10px_rgba(2ef,68,68,0.8)] text-center">
             GAME OVER 💔
           </h2>
-          <div className="text-xl font-bold tracking-widest text-red-300 uppercase">
+          <div className="text-sm sm:text-base md:text-xl font-bold tracking-widest text-red-300 uppercase text-center">
             Level {currentLevelIndex + 1}: {LEVEL_LAYOUTS[currentLevelIndex].name}
           </div>
 
-          <div className="flex flex-col w-full gap-2 my-6 font-mono text-lg bg-black/40 p-6 rounded-xl border border-red-900/50">
+          <div className="flex flex-col w-full gap-2 my-4 sm:my-6 font-mono text-base sm:text-lg md:text-xl bg-black/40 p-4 sm:p-6 rounded-xl border border-red-900/50">
             <div className="flex justify-between text-green-300">
               <span>You:</span> <span>{gameState.playerScore} points</span>
             </div>
@@ -873,15 +873,15 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="text-3xl font-black text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] mb-2">
+          <div className="text-2xl sm:text-3xl md:text-4xl font-black text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.8)] mb-1 sm:mb-2 text-center">
             HALF MOON WINS
           </div>
 
-          <div className="text-sm font-mono text-red-300/60 mb-6 uppercase tracking-widest">
+          <div className="text-xs sm:text-sm md:text-base font-mono text-red-300/60 mb-4 sm:mb-6 uppercase tracking-widest text-center">
             Returning to Level 1...
           </div>
 
-          <button onClick={handleRetryGame} className="w-full py-4 rounded-xl bg-red-900 border border-red-500 hover:bg-red-800 hover:border-red-400 font-bold uppercase tracking-wider transition-all outline-none shadow-[0_0_20px_rgba(220,38,38,0.3)]">
+          <button onClick={handleRetryGame} className="w-full py-3 sm:py-4 rounded-xl bg-red-900 border border-red-500 hover:bg-red-800 hover:border-red-400 font-bold uppercase tracking-wider transition-all outline-none shadow-[0_0_20px_rgba(220,38,38,0.3)] text-sm sm:text-base md:text-lg">
             🔄 TRY AGAIN
           </button>
         </div>
@@ -907,18 +907,18 @@ export default function Home() {
       )}
 
       {/* TOP: LAYOUT WRAPPER */}
-      <div className="w-full max-w-5xl flex flex-col items-center gap-6">
+      <div className="w-full max-w-5xl flex flex-col items-center gap-4 sm:gap-6">
 
         {/* HEADER: Level & Controls */}
         <div className="w-full flex items-center relative py-2 mb-2">
           <div className="flex-1 flex justify-center">
-            <div className="text-xl font-bold tracking-[0.2em] text-indigo-300 uppercase drop-shadow-[0_0_8px_rgba(165,180,252,0.8)]">
+            <div className="text-sm sm:text-base md:text-xl font-bold tracking-[0.2em] text-indigo-300 uppercase drop-shadow-[0_0_8px_rgba(165,180,252,0.8)] text-center">
               Level {gameState.layout.levelNumber}: {gameState.layout.name}
             </div>
           </div>
-          <div className="absolute right-0 flex gap-4">
-            <button onClick={handleTutorialButton} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/30 text-indigo-200 hover:text-white hover:bg-black/60 transition-all shadow-xl flex items-center justify-center text-lg">❓</button>
-            <button onClick={toggleMute} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/30 text-indigo-200 hover:text-white hover:bg-black/60 transition-all shadow-xl flex items-center justify-center text-lg">{isMuted ? '🔇' : '🔊'}</button>
+          <div className="absolute right-0 flex gap-2 sm:gap-4">
+            <button onClick={handleTutorialButton} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/30 text-indigo-200 hover:text-white hover:bg-black/60 transition-all shadow-xl flex items-center justify-center text-sm sm:text-lg">❓</button>
+            <button onClick={toggleMute} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-black/40 backdrop-blur-xl border border-white/10 hover:border-white/30 text-indigo-200 hover:text-white hover:bg-black/60 transition-all shadow-xl flex items-center justify-center text-sm sm:text-lg">{isMuted ? '🔇' : '🔊'}</button>
           </div>
         </div>
 
@@ -941,14 +941,14 @@ export default function Home() {
         )}
 
         {/* TOP: HALF MOON AREA */}
-        <div className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-red-950/30 to-black/60 border border-red-500/20 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.05)] relative overflow-hidden">
+        <div className="w-full flex justify-between items-center px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 flex-row bg-gradient-to-r from-red-950/30 to-black/60 border border-red-500/20 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.05)] relative overflow-hidden">
           <div className="flex flex-col">
-            <div className="text-2xl font-black tracking-widest text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10">HALF MOON</div>
+            <div className="text-sm sm:text-lg md:text-2xl font-black tracking-widest text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)] z-10">HALF MOON</div>
           </div>
 
           {aiActionState.phase === 'thinking' && (
             <div className="absolute inset-0 flex items-center justify-center bg-red-950/40 backdrop-blur-sm z-0">
-              <div className="text-red-300 font-mono tracking-[0.3em] flex items-center gap-2 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]">
+              <div className="text-[10px] sm:text-xs md:text-base text-red-300 font-mono tracking-[0.3em] flex items-center gap-2 drop-shadow-[0_0_8px_rgba(248,113,113,0.8)]">
                 THINKING
                 <span className="flex gap-1 ml-2">
                   <span className="animate-bounce" style={{ animationDelay: '0ms' }}>.</span>
@@ -960,12 +960,12 @@ export default function Home() {
           )}
 
           <div className="flex flex-col items-end justify-center z-10 opacity-80" style={{ opacity: aiActionState.phase !== 'idle' ? 0.2 : 0.8 }}>
-            <span className="text-2xl font-mono text-gray-200 font-bold">{gameState.opponentScore} PTS</span>
+            <span className="text-sm sm:text-xl md:text-2xl font-mono text-gray-200 font-bold">{gameState.opponentScore} PTS</span>
           </div>
         </div>
 
         {/* AI Face-down Cards */}
-        <div className="flex gap-6 justify-center z-20 h-[100px] items-center">
+        <div className="flex gap-2 sm:gap-4 md:gap-6 justify-center z-20 h-[50px] sm:h-[75px] md:h-[100px] items-center">
           {gameState.opponentHand.map(card => {
             const isActing = aiActionState.cardId === card.id;
             const aiCardPlayVariants = {
@@ -1023,10 +1023,10 @@ export default function Home() {
                 top: `calc(${targetNode.position.y}% - 60px)`
               }}
             >
-              <div className={`text-3xl font-black ${textColor} drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]`}>
+              <div className={`text-xl sm:text-2xl md:text-3xl font-black ${textColor} drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)]`}>
                 +{popup.points}
               </div>
-              <div className={`text-xs font-bold text-center uppercase mt-1 ${textColor}`}>
+              <div className={`text-[10px] sm:text-xs font-bold text-center uppercase mt-1 ${textColor}`}>
                 {popup.type.replace('_', ' ')}
               </div>
             </motion.div>
@@ -1040,15 +1040,15 @@ export default function Home() {
         ))}
 
         {multipleChainsPopup && (
-          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-yellow-400 to-yellow-600 p-8 rounded-3xl text-center z-[1001] shadow-[0_10px_80px_rgba(253,224,71,0.6)] border-[4px] border-yellow-200 animate-in zoom-in-75 fade-in duration-300 pointer-events-none">
-            <div className="text-3xl font-black mb-2 uppercase drop-shadow-[0_4px_4px_rgba(0,0,0,0.3)] text-indigo-950">MULTIPLE CHAINS! 🎉</div>
-            <div className="text-xl mb-3 font-bold text-indigo-900 tracking-wide">{multipleChainsPopup.count} chains found</div>
-            <div className="text-6xl font-black drop-shadow-[0_4px_4px_rgba(255,255,255,0.4)] text-white mt-4 tracking-tighter">+{multipleChainsPopup.points} PTS</div>
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-yellow-400 to-yellow-600 p-4 sm:p-6 md:p-8 rounded-2xl md:rounded-3xl w-[90vw] sm:w-auto text-center z-[1001] shadow-[0_10px_80px_rgba(253,224,71,0.6)] border-[4px] border-yellow-200 animate-in zoom-in-75 fade-in duration-300 pointer-events-none">
+            <div className="text-xl sm:text-2xl md:text-3xl font-black mb-2 uppercase drop-shadow-[0_4px_4px_rgba(0,0,0,0.3)] text-indigo-950">MULTIPLE CHAINS! 🎉</div>
+            <div className="text-base sm:text-lg md:text-xl mb-2 sm:mb-3 font-bold text-indigo-900 tracking-wide">{multipleChainsPopup.count} chains found</div>
+            <div className="text-4xl sm:text-5xl md:text-6xl font-black drop-shadow-[0_4px_4px_rgba(255,255,255,0.4)] text-white mt-2 sm:mt-4 tracking-tighter">+{multipleChainsPopup.points} PTS</div>
           </div>
         )}
 
         {/* Game Board Container */}
-        <div className={`w-full max-w-4xl h-[550px] rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95
+        <div className={`w-full max-w-4xl h-[450px] sm:h-[450px] md:h-[550px] rounded-2xl md:rounded-[2rem] backdrop-blur-xl border relative overflow-hidden transition-colors duration-1000 animate-in fade-in zoom-in-95
            ${THEME_STYLES[gameState.layout.theme || 'indigo'].bg} 
            ${THEME_STYLES[gameState.layout.theme || 'indigo'].border} 
            ${THEME_STYLES[gameState.layout.theme || 'indigo'].shadow}
@@ -1218,10 +1218,10 @@ export default function Home() {
       </div>
 
       {/* BOTTOM: PLAYER AREA */}
-      <div className="w-full max-w-5xl flex flex-col items-center gap-6">
+      <div className="w-full max-w-5xl flex flex-col items-center gap-4 sm:gap-6">
 
         {/* Player Hand */}
-        <div className="flex gap-6 justify-center z-20">
+        <div className="flex gap-2 sm:gap-4 md:gap-6 justify-center z-20">
           {gameState.playerHand.map((card, index) => {
             const isSelected = selectedCardId === card.id;
             return (
@@ -1242,12 +1242,12 @@ export default function Home() {
           })}
         </div>
 
-        <div className="w-full flex justify-between items-center px-8 py-4 bg-gradient-to-r from-blue-950/30 to-black/60 border border-indigo-500/20 rounded-2xl shadow-[0_0_20px_rgba(99,102,241,0.05)] relative overflow-hidden">
+        <div className="w-full flex justify-between items-center px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 flex-row bg-gradient-to-r from-blue-950/30 to-black/60 border border-indigo-500/20 rounded-2xl shadow-[0_0_20px_rgba(99,102,241,0.05)] relative overflow-hidden">
           <div className="flex flex-col">
-            <div className="text-2xl font-black tracking-widest text-indigo-400 drop-shadow-[0_0_8px_rgba(165,180,252,0.5)] z-10">YOU</div>
+            <div className="text-sm sm:text-lg md:text-2xl font-black tracking-widest text-indigo-400 drop-shadow-[0_0_8px_rgba(165,180,252,0.5)] z-10">YOU</div>
           </div>
           <div className="flex flex-col items-end justify-center z-10">
-            <span className="text-2xl font-mono text-gray-200 font-bold">{gameState.playerScore} PTS</span>
+            <span className="text-sm sm:text-xl md:text-2xl font-mono text-gray-200 font-bold">{gameState.playerScore} PTS</span>
           </div>
         </div>
       </div>
