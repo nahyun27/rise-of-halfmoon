@@ -10,6 +10,7 @@ import { LEVEL_LAYOUTS } from "../constants/layouts";
 import { TutorialOverlay } from "../components/TutorialOverlay";
 import { LevelIntro } from "../components/LevelIntro";
 import { DrawScreen } from "../components/DrawScreen";
+import { StartScreen } from "../components/StartScreen";
 
 const LEVEL_NAMES: Record<number, string> = {
   1: 'MARCH',
@@ -907,25 +908,12 @@ export default function Home() {
 
   if (gameState.phase === 'start') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 bg-[#0a0a1a] text-white selection:bg-indigo-500/30">
-        <div className="border border-indigo-500/30 rounded-2xl md:rounded-3xl p-6 sm:p-8 md:p-12 bg-indigo-950/20 shadow-[0_0_50px_rgba(49,46,129,0.5)] backdrop-blur-sm max-w-[95vw] sm:max-w-lg w-full flex flex-col items-center gap-6 sm:gap-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black tracking-widest text-center text-indigo-300 drop-shadow-[0_0_10px_rgba(165,180,252,0.8)] flex items-center gap-2 sm:gap-4 uppercase">
-            🌙 Rise of the<br />Half Moon
-          </h1>
-          <div className="w-full flex flex-col gap-3 sm:gap-4 mt-2 sm:mt-4">
-            <button onClick={startGame} className="w-full py-3 sm:py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 font-bold uppercase tracking-wider hover:brightness-125 transition-all outline-none text-sm sm:text-base md:text-lg">
-              🎮 Start Game
-            </button>
-            <button onClick={openTutorial} className="w-full py-3 sm:py-4 rounded-xl bg-indigo-950/40 border border-indigo-500/30 font-bold uppercase tracking-wider hover:bg-indigo-900/60 transition-all outline-none text-indigo-200 text-sm sm:text-base md:text-lg">
-              📖 How to Play
-            </button>
-          </div>
-          <div className="text-indigo-400 font-mono tracking-widest text-xs sm:text-sm flex flex-col sm:flex-row gap-2 sm:gap-8 mt-2 sm:mt-4 text-center">
-            <span>Current Level: {currentLevelIndex + 1}</span>
-            <span>Best Level: {bestLevelReached}</span>
-          </div>
-        </div>
-      </div>
+      <StartScreen
+        onStartGame={startGame}
+        onShowTutorial={openTutorial}
+        currentLevel={currentLevelIndex + 1}
+        bestLevel={bestLevelReached}
+      />
     );
   }
 
