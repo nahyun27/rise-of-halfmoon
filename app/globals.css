@@ -240,3 +240,13 @@ body {
     height: 400px;
   }
 }
+
+@keyframes dash {
+  from {
+    stroke-dashoffset: 1000;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}

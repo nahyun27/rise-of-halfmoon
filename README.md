@@ -32,7 +32,6 @@ https://doodles.google/doodle/rise-of-the-half-moon/
 ### Special Rules
 - **Chain Steal**: Opponent can steal your chain by adding to it
 - **Card Bonus**: +1 point per card you control at game end
-- **Win Streak**: Win 3 rounds to unlock wildcard
 
 ## 🛠 Tech Stack
 
@@ -41,12 +40,6 @@ https://doodles.google/doodle/rise-of-the-half-moon/
 - Framer Motion
 - Tailwind CSS
 
-## 🚀 Quick Start
-
-\`\`\`bash
-npm install
-npm run dev
-\`\`\`
 
 ---
 

@@ -1,4 +1,4 @@
-export type GamePhase = 'start' | 'tutorial' | 'levelIntro' | 'playing' | 'endGameCounting' | 'levelWin' | 'gameOver';
+export type GamePhase = 'start' | 'tutorial' | 'levelIntro' | 'playing' | 'endGameCounting' | 'levelWin' | 'gameOver' | 'draw';
 
 export interface MoonCard {
   id: string;

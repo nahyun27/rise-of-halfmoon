@@ -9,6 +9,7 @@ import { aiTurn } from "../utils/ai";
 import { LEVEL_LAYOUTS } from "../constants/layouts";
 import { TutorialOverlay } from "../components/TutorialOverlay";
 import { LevelIntro } from "../components/LevelIntro";
+import { DrawScreen } from "../components/DrawScreen";
 
 const LEVEL_NAMES: Record<number, string> = {
   1: 'MARCH',
@@ -192,6 +193,37 @@ function playGameOverSound(result: 'win' | 'lose') {
         }, i * 200);
       });
     }
+  } catch (e) { }
+}
+
+function playDrawSound() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+    // Neutral tone sequence (neither happy nor sad)
+    const notes = [
+      { freq: 440, time: 0 },     // A
+      { freq: 440, time: 0.15 },  // A (repeat)
+      { freq: 440, time: 0.3 }    // A (repeat)
+    ];
+
+    notes.forEach(({ freq, time }) => {
+      setTimeout(() => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
+      }, time * 1000);
+    });
   } catch (e) { }
 }
 
@@ -500,9 +532,13 @@ export default function Home() {
           setBestLevelReached(nextBest);
           localStorage.setItem('halfmoon_bestLevel', nextBest.toString());
           setGameState(prev => ({ ...prev, phase: 'levelWin' }));
-        } else {
+        } else if (currentPlayerScore < currentOpponentScore) {
           playGameOverSound('lose');
           setGameState(prev => ({ ...prev, phase: 'gameOver' }));
+        } else {
+          // DRAW - scores are equal
+          playDrawSound();
+          setGameState(prev => ({ ...prev, phase: 'draw' }));
         }
       };
 
@@ -528,6 +564,10 @@ export default function Home() {
     setCurrentLevelIndex(0);
     localStorage.setItem('halfmoon_currentLevel', '0');
     resetGameToLevel(0, 'levelIntro');
+  };
+
+  const handleRetryLevel = () => {
+    resetGameToLevel(currentLevelIndex, 'playing');
   };
 
   const startGame = () => {
@@ -1008,6 +1048,15 @@ export default function Home() {
           />
         )}
 
+        {gameState.phase === 'draw' && (
+          <DrawScreen
+            currentLevel={currentLevelIndex + 1}
+            levelName={LEVEL_LAYOUTS[currentLevelIndex].name}
+            score={gameState.playerScore}
+            onRetry={handleRetryLevel}
+          />
+        )}
+
         {/* TOP: HALF MOON AREA */}
         <div className="shrink-0 w-full flex justify-between items-center px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 flex-row bg-gradient-to-r from-red-950/30 to-black/60 border border-red-500/20 rounded-2xl shadow-[0_0_20px_rgba(220,38,38,0.05)] relative overflow-hidden">
           <div className="flex flex-col">
@@ -1169,8 +1218,8 @@ export default function Home() {
                 // Highlight overrides permanent styling temporarily during animations
                 if (isHighlighted && highlightEdge) {
                   if (highlightEdge.type === 'CHAIN') {
-                    lineClass = 'stroke-yellow-400 stroke-[3] sm:stroke-[5] drop-shadow-[0_0_15px_rgba(253,224,71,0.8)]';
-                    lineStyle = { strokeDasharray: '100', animation: 'dash 0.4s linear forwards' };
+                    lineClass = 'stroke-purple-400 stroke-[3] sm:stroke-[5] drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]';
+                    lineStyle = { strokeDasharray: '1000', animation: 'dash 0.4s linear forwards' };
                   }
                   else if (highlightEdge.type === 'FULL_MOON') lineClass = 'stroke-yellow-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]';
                   else if (highlightEdge.type === 'PAIR') lineClass = 'stroke-blue-400 stroke-[2] sm:stroke-[4] drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]';
