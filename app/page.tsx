@@ -308,7 +308,7 @@ function GamePauseMenu({ onResume, onExit, onOpenTutorial, currentLevel, playerS
         <div className="w-full h-[1px] bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent my-6" />
 
         <a
-          href="https://github.com/kimnahyun/rise-of-halfmoon"
+          href="https://github.com/nahyun27/rise-of-halfmoon"
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 text-indigo-300/70 hover:text-white hover:bg-white/5 no-underline text-xs sm:text-sm px-4 py-2 rounded-lg transition-all"
@@ -455,6 +455,7 @@ export default function Home() {
   const [chainPopups, setChainPopups] = useState<{ id: string, text: string }[]>([]);
   const [multipleChainsPopup, setMultipleChainsPopup] = useState<{ count: number, points: number } | null>(null);
   const [aiPlayOffset, setAiPlayOffset] = useState({ x: 0, y: 0 });
+  const [isAnimating, setIsAnimating] = useState(false);
 
   // Visual effects state
   const [scorePopups, setScorePopups] = useState<ScorePopupData[]>([]);
@@ -503,7 +504,7 @@ export default function Home() {
   const isGameOver = gameState.playerHand.length === 0 || gameState.layout.nodes.every(node => node.card !== null);
 
   useEffect(() => {
-    if (gameState.phase === 'playing' && isGameOver) {
+    if (gameState.phase === 'playing' && isGameOver && !isAnimating) {
       setGameState(prev => ({ ...prev, phase: 'endGameCounting' as GamePhase }));
 
       let currentOpponentScore = gameState.opponentScore;
@@ -564,7 +565,7 @@ export default function Home() {
 
       renderCounting();
     }
-  }, [isGameOver, gameState.phase, gameState.playerScore, gameState.opponentScore, currentLevelIndex, bestLevelReached]);
+  }, [isGameOver, isAnimating, gameState.phase, gameState.playerScore, gameState.opponentScore, currentLevelIndex, bestLevelReached]);
 
   const handleNextLevel = () => {
     const next = currentLevelIndex + 1;
@@ -695,45 +696,8 @@ export default function Home() {
     const events = evaluateGraphPlacement(newNodes, nodeId);
 
     const chainEvents = events.filter(e => e.type === 'CHAIN');
-    const otherEvents = events.filter(e => e.type !== 'CHAIN');
-
-    let addedPlayerScore = 0;
-    let addedOpponentScore = 0;
-    const newPopups: ScorePopupData[] = [];
-    const newHighlightNodes: HighlightNode[] = [];
-    const newHighlightEdges: HighlightEdge[] = [];
-    const newScoredEdges: { id1: string, id2: string, type: HighlightType }[] = [...(gameState.layout.scoredEdges || [])];
-
-    events.forEach((event: ScoringEvent) => {
-      if (event.owner === 'player') addedPlayerScore += event.points;
-      else if (event.owner === 'opponent') addedOpponentScore += event.points;
-
-      if (event.type === 'CHAIN') {
-        event.nodeIds.forEach((id: string) => {
-          const targetNode = newNodes.find(n => n.id === id);
-          if (targetNode && targetNode.card) {
-            targetNode.card.owner = newOwner;
-            targetNode.card.scoredBy = event.owner;
-          }
-        });
-      }
-
-      event.nodeIds.forEach((id: string) => {
-        const targetNode = newNodes.find(n => n.id === id);
-        if (targetNode && targetNode.card) {
-          targetNode.card.scoredBy = event.owner;
-        }
-      });
-
-      // Save permanent edges
-      if (event.type === 'CHAIN') {
-        for (let i = 0; i < event.nodeIds.length - 1; i++) {
-          newScoredEdges.push({ id1: event.nodeIds[i], id2: event.nodeIds[i + 1], type: 'CHAIN' });
-        }
-      } else {
-        newScoredEdges.push({ id1: event.nodeIds[0], id2: event.nodeIds[1], type: event.type });
-      }
-    });
+    const fullMoonEvents = events.filter(e => e.type === 'FULL_MOON');
+    const pairEvents = events.filter(e => e.type === 'PAIR');
 
     const newHand = [...handToUse];
     const newDrawPile = [...drawPileToUse];
@@ -743,15 +707,12 @@ export default function Home() {
     // Apply immediate game state (board + hands)
     setGameState(prev => ({
       ...prev,
-      layout: { ...prev.layout, nodes: newNodes, scoredEdges: newScoredEdges },
+      layout: { ...prev.layout, nodes: newNodes },
       playerHand: isAiTurn ? prev.playerHand : newHand,
       playerDrawPile: isAiTurn ? prev.playerDrawPile : newDrawPile,
       opponentHand: isAiTurn ? newHand : prev.opponentHand,
       opponentDrawPile: isAiTurn ? newDrawPile : prev.opponentDrawPile,
-      currentTurn: isAiTurn ? 'player' : 'opponent',
-      // Delay score application if there are chain events
-      playerScore: chainEvents.length > 0 ? prev.playerScore : prev.playerScore + addedPlayerScore,
-      opponentScore: chainEvents.length > 0 ? prev.opponentScore : prev.opponentScore + addedOpponentScore
+      currentTurn: isAiTurn ? 'player' : 'opponent'
     }));
 
     if (!isAiTurn) {
@@ -759,153 +720,205 @@ export default function Home() {
       setHoveredNodeId(null);
     }
 
-    // Sequence Animations
-    if (chainEvents.length > 0) {
-      let maxDelay = 0;
-      let totalChainPoints = 0;
+    setIsAnimating(true);
+    const runAnimations = async () => {
+      let currentNodes = [...newNodes];
+      let currentScoredEdges = [...(gameState.layout.scoredEdges || [])];
 
-      chainEvents.forEach((chainEv, evIndex) => {
-        const cLength = chainEv.nodeIds.length;
-        totalChainPoints += chainEv.points;
-        const chainStartTime = evIndex * (cLength * 400 + 1000);
+      const processEventGroup = async (evtGroup: ScoringEvent[], type: HighlightType) => {
+        if (evtGroup.length === 0) return;
 
-        if (chainEvents.length > 1) {
-          setTimeout(() => {
+        let addedPlayerScore = 0;
+        let addedOpponentScore = 0;
+        const newPopups: ScorePopupData[] = [];
+        const newHighlightNodes: HighlightNode[] = [];
+        const newHighlightEdges: HighlightEdge[] = [];
+
+        evtGroup.forEach((event, i) => {
+          if (event.owner === 'player') addedPlayerScore += event.points;
+          else if (event.owner === 'opponent') addedOpponentScore += event.points;
+
+          event.nodeIds.forEach(id => {
+            currentNodes = currentNodes.map(n => {
+              if (n.id === id && n.card) {
+                return { ...n, card: { ...n.card, scoredBy: event.owner, owner: type === 'CHAIN' ? newOwner as any : n.card.owner } };
+              }
+              return n;
+            });
+          });
+
+          if (type === 'CHAIN') {
+            for (let j = 0; j < event.nodeIds.length - 1; j++) {
+              currentScoredEdges.push({ id1: event.nodeIds[j], id2: event.nodeIds[j + 1], type: 'CHAIN' });
+            }
+          } else {
+            currentScoredEdges.push({ id1: event.nodeIds[0], id2: event.nodeIds[1], type });
+          }
+
+          if (type === 'PAIR') {
+            playPairSound();
+            event.nodeIds.forEach(id => {
+              const nodeEl = document.getElementById(`node-${id}`);
+              if (nodeEl) {
+                nodeEl.animate([
+                  { transform: 'scale(1)', boxShadow: '0 0 0px rgba(59,130,246,0)', borderColor: 'transparent', zIndex: 10 },
+                  { transform: 'scale(1.05)', boxShadow: '0 0 25px rgba(59,130,246,1)', borderColor: '#3b82f6', zIndex: 50 },
+                  { transform: 'scale(1)', boxShadow: '0 0 10px rgba(59,130,246,0.5)', borderColor: '#3b82f6', zIndex: 10 }
+                ], { duration: 400, easing: 'ease-out' });
+              }
+            });
+          } else if (type === 'FULL_MOON') {
+            playFullMoonSound();
+            event.nodeIds.forEach((id, idx) => {
+              setTimeout(() => {
+                const nodeEl = document.getElementById(`node-${id}`);
+                if (nodeEl) {
+                  nodeEl.animate([
+                    { transform: 'scale(1) rotate(0deg)', boxShadow: '0 0 0px rgba(250,204,21,0)', filter: 'brightness(1)', zIndex: 10 },
+                    { transform: 'scale(1.05) rotate(5deg)', boxShadow: '0 0 35px rgba(250,204,21,1)', filter: 'brightness(1.5)', zIndex: 50 },
+                    { transform: 'scale(1.02) rotate(0deg)', boxShadow: '0 0 20px rgba(250,204,21,0.8)', filter: 'brightness(1.2)', zIndex: 30 }
+                  ], { duration: 500, easing: 'ease-out' });
+                }
+              }, idx * 100);
+            });
+          }
+
+          event.nodeIds.forEach(id => newHighlightNodes.push({ nodeId: id, type }));
+          if (type !== 'CHAIN') {
+            newHighlightEdges.push({ id1: event.nodeIds[0], id2: event.nodeIds[1], type });
+          }
+          newPopups.push({ id: `popup-${Date.now()}-${Math.random()}`, points: event.points, type, nodeId: nodeId, owner: event.owner });
+        });
+
+        setGameState(prev => ({
+          ...prev,
+          layout: { ...prev.layout, nodes: currentNodes, scoredEdges: currentScoredEdges },
+          playerScore: prev.playerScore + addedPlayerScore,
+          opponentScore: prev.opponentScore + addedOpponentScore
+        }));
+
+        setHighlightedNodes(prev => [...prev, ...newHighlightNodes]);
+        if (type !== 'CHAIN') setHighlightedEdges(prev => [...prev, ...newHighlightEdges]);
+        setScorePopups(prev => [...prev, ...newPopups]);
+
+        if (type === 'FULL_MOON') await delay(1000);
+        else if (type === 'PAIR') await delay(800);
+
+        setHighlightedNodes(prev => prev.filter(n => !newHighlightNodes.find(nn => nn.nodeId === n.nodeId)));
+        setHighlightedEdges(prev => prev.filter(e => !newHighlightEdges.find(ne => ne.id1 === e.id1 && ne.id2 === e.id2)));
+        setTimeout(() => {
+          setScorePopups(prev => prev.filter(p => !newPopups.find(np => np.id === p.id)));
+        }, 1000);
+      };
+
+      await processEventGroup(pairEvents, 'PAIR');
+      await processEventGroup(fullMoonEvents, 'FULL_MOON');
+
+      if (chainEvents.length > 0) {
+        let totalChainPoints = 0;
+
+        for (let evIndex = 0; evIndex < chainEvents.length; evIndex++) {
+          const chainEv = chainEvents[evIndex];
+          const cLength = chainEv.nodeIds.length;
+          totalChainPoints += chainEv.points;
+
+          if (chainEvents.length > 1) {
             const popupId = `chain-label-${Date.now()}-${evIndex}`;
             setChainPopups(prev => [...prev, { id: popupId, text: `CHAIN ${evIndex + 1} OF ${chainEvents.length}` }]);
             setTimeout(() => {
               setChainPopups(prev => prev.filter(p => p.id !== popupId));
             }, 1500);
-          }, chainStartTime);
-        }
+          }
 
-        const startIndex = chainEv.nodeIds.indexOf(nodeId) !== -1 ? chainEv.nodeIds.indexOf(nodeId) : 0;
+          const startIndex = chainEv.nodeIds.indexOf(nodeId) !== -1 ? chainEv.nodeIds.indexOf(nodeId) : 0;
+          let localMaxDist = 0;
+          chainEv.nodeIds.forEach((id, i) => {
+            const d = Math.abs(i - startIndex);
+            if (d > localMaxDist) localMaxDist = d;
+          });
 
-        // Let the max possible distance be the chain length - 1. We want the animation to *end* at the placed card (distance 0 originally).
-        // So the new distance is (max possible distance for this chain) - (distance from placed card).
+          const chainDuration = localMaxDist * 400 + 400;
 
-        let localMaxDist = 0;
-        chainEv.nodeIds.forEach((id, i) => {
-          const d = Math.abs(i - startIndex);
-          if (d > localMaxDist) localMaxDist = d;
-        });
+          chainEv.nodeIds.forEach((id, i) => {
+            const distFromPlaced = Math.abs(i - startIndex);
+            const distance = localMaxDist - distFromPlaced;
 
-        chainEv.nodeIds.forEach((id, i) => {
-          const distFromPlaced = Math.abs(i - startIndex);
-          // Reverse the order: start from the furthest point and move towards the placed card
-          const distance = localMaxDist - distFromPlaced;
+            setTimeout(() => {
+              playChainSound(distance, cLength);
+              setHighlightedNodes(prev => [...prev, { nodeId: id, type: 'CHAIN' }]);
+
+              const nodeEl = document.getElementById(`node-${id}`);
+              if (nodeEl) {
+                const isPlaced = id === nodeId;
+                nodeEl.animate([
+                  { transform: 'scale(1)', boxShadow: '0 0 0px rgba(168,85,247,0)', borderColor: 'transparent', zIndex: 10 },
+                  { transform: `scale(${isPlaced ? 1.05 : 1.05})`, boxShadow: `0 0 ${isPlaced ? '40px' : '30px'} rgba(168,85,247,1)`, borderColor: '#a855f7', zIndex: 50 },
+                  { transform: `scale(${isPlaced ? 1.02 : 1.02})`, boxShadow: `0 0 ${isPlaced ? '25px' : '20px'} rgba(168,85,247,0.8)`, borderColor: '#a855f7', zIndex: 30 }
+                ], {
+                  duration: 600,
+                  easing: 'ease-out',
+                  fill: 'forwards'
+                });
+
+                setTimeout(() => {
+                  if (nodeEl) nodeEl.style.transform = '';
+                }, 2600);
+              }
+
+              if (i < cLength - 1) {
+                setHighlightedEdges(prev => [...prev, { id1: id, id2: chainEv.nodeIds[i + 1], type: 'CHAIN' }]);
+              }
+            }, distance * 400);
+          });
 
           setTimeout(() => {
-            playChainSound(distance, cLength);
-            setHighlightedNodes(prev => [...prev, { nodeId: id, type: 'CHAIN' }]);
+            playCompletionSound();
+            const popupId = `popup-${Date.now()}-${evIndex}`;
+            setScorePopups(prev => [...prev, { id: popupId, points: chainEv.points, type: 'CHAIN', nodeId: nodeId, owner: chainEv.owner }]);
 
-            const nodeEl = document.getElementById(`node-${id}`);
-            if (nodeEl) {
-              const isPlaced = id === nodeId;
-              nodeEl.animate([
-                { transform: 'scale(1)', boxShadow: '0 0 0px rgba(168,85,247,0)', borderColor: 'transparent', zIndex: 10 },
-                { transform: `scale(${isPlaced ? 1.05 : 1.05})`, boxShadow: `0 0 ${isPlaced ? '40px' : '30px'} rgba(168,85,247,1)`, borderColor: '#a855f7', zIndex: 50 },
-                { transform: `scale(${isPlaced ? 1.02 : 1.02})`, boxShadow: `0 0 ${isPlaced ? '25px' : '20px'} rgba(168,85,247,0.8)`, borderColor: '#a855f7', zIndex: 30 }
-              ], {
-                duration: 600,
-                easing: 'ease-out',
-                fill: 'forwards'
-              });
-
-              // Clear animation formatting
-              setTimeout(() => {
-                if (nodeEl) nodeEl.style.transform = '';
-              }, 2600);
+            currentNodes = currentNodes.map(n => {
+              if (chainEv.nodeIds.includes(n.id) && n.card) {
+                return { ...n, card: { ...n.card, scoredBy: chainEv.owner, owner: newOwner as any } };
+              }
+              return n;
+            });
+            for (let j = 0; j < chainEv.nodeIds.length - 1; j++) {
+              currentScoredEdges.push({ id1: chainEv.nodeIds[j], id2: chainEv.nodeIds[j + 1], type: 'CHAIN' });
             }
 
-            if (i < cLength - 1) {
-              setHighlightedEdges(prev => [...prev, { id1: id, id2: chainEv.nodeIds[i + 1], type: 'CHAIN' }]);
-            }
-          }, distance * 400 + chainStartTime);
-        });
+            setGameState(prev => ({
+              ...prev,
+              layout: { ...prev.layout, nodes: currentNodes, scoredEdges: currentScoredEdges },
+              playerScore: chainEv.owner === 'player' ? prev.playerScore + chainEv.points : prev.playerScore,
+              opponentScore: chainEv.owner === 'opponent' ? prev.opponentScore + chainEv.points : prev.opponentScore
+            }));
 
-        const burstTime = localMaxDist * 400 + 400 + chainStartTime;
-        if (burstTime > maxDelay) maxDelay = burstTime;
+            setTimeout(() => {
+              setScorePopups(prev => prev.filter(p => p.id !== popupId));
+            }, 2000);
+          }, chainDuration);
 
-        setTimeout(() => {
-          playCompletionSound();
-          setScorePopups(prev => [...prev, { id: `popup-${Date.now()}-${evIndex}`, points: chainEv.points, type: 'CHAIN', nodeId: nodeId, owner: chainEv.owner }]);
-        }, burstTime);
+          setTimeout(() => {
+            setHighlightedNodes(prev => prev.filter(n => !chainEv.nodeIds.includes(n.nodeId)));
+            setHighlightedEdges(prev => prev.filter(e => e.type !== 'CHAIN'));
+          }, chainDuration + 2000);
 
-        setTimeout(() => {
-          setHighlightedNodes(prev => prev.filter(n => !chainEv.nodeIds.includes(n.nodeId)));
-          setHighlightedEdges(prev => prev.filter(e => e.type !== 'CHAIN'));
-          setScorePopups(prev => prev.filter(p => p.type !== 'CHAIN'));
-        }, burstTime + 2000);
-      });
+          await delay(chainDuration + 800);
+        }
 
-      if (chainEvents.length > 1) {
-        setTimeout(() => {
+        if (chainEvents.length > 1) {
           setMultipleChainsPopup({ count: chainEvents.length, points: totalChainPoints });
           playMultipleChainSound();
           setTimeout(() => {
             setMultipleChainsPopup(null);
           }, 3000);
-        }, maxDelay + 500);
-        maxDelay += 4000;
-      }
-
-      // Apply delayed scores
-      setTimeout(() => {
-        setGameState(prev => ({
-          ...prev,
-          playerScore: prev.playerScore + addedPlayerScore,
-          opponentScore: prev.opponentScore + addedOpponentScore
-        }));
-      }, maxDelay);
-
-    }
-
-    if (otherEvents.length > 0) {
-      otherEvents.forEach((event: ScoringEvent, i: number) => {
-        if (event.type === 'PAIR') {
-          playPairSound();
-          event.nodeIds.forEach(id => {
-            const nodeEl = document.getElementById(`node-${id}`);
-            if (nodeEl) {
-              nodeEl.animate([
-                { transform: 'scale(1)', boxShadow: '0 0 0px rgba(59,130,246,0)', borderColor: 'transparent', zIndex: 10 },
-                { transform: 'scale(1.05)', boxShadow: '0 0 25px rgba(59,130,246,1)', borderColor: '#3b82f6', zIndex: 50 },
-                { transform: 'scale(1)', boxShadow: '0 0 10px rgba(59,130,246,0.5)', borderColor: '#3b82f6', zIndex: 10 }
-              ], { duration: 400, easing: 'ease-out' });
-            }
-          });
-        } else if (event.type === 'FULL_MOON') {
-          playFullMoonSound();
-          event.nodeIds.forEach((id, idx) => {
-            setTimeout(() => {
-              const nodeEl = document.getElementById(`node-${id}`);
-              if (nodeEl) {
-                nodeEl.animate([
-                  { transform: 'scale(1) rotate(0deg)', boxShadow: '0 0 0px rgba(250,204,21,0)', filter: 'brightness(1)', zIndex: 10 },
-                  { transform: 'scale(1.05) rotate(5deg)', boxShadow: '0 0 35px rgba(250,204,21,1)', filter: 'brightness(1.5)', zIndex: 50 },
-                  { transform: 'scale(1.02) rotate(0deg)', boxShadow: '0 0 20px rgba(250,204,21,0.8)', filter: 'brightness(1.2)', zIndex: 30 }
-                ], { duration: 500, easing: 'ease-out' });
-              }
-            }, idx * 100);
-          });
+          await delay(1500);
         }
+      }
+      setIsAnimating(false);
+    };
 
-        event.nodeIds.forEach((id: string) => newHighlightNodes.push({ nodeId: id, type: event.type as HighlightType }));
-        newHighlightEdges.push({ id1: event.nodeIds[0], id2: event.nodeIds[1], type: event.type as HighlightType });
-        newPopups.push({ id: `popup-${Date.now()}-${i}`, points: event.points, type: event.type as HighlightType, nodeId: nodeId, owner: event.owner });
-      });
-
-      setScorePopups(prev => [...prev, ...newPopups]);
-      setHighlightedNodes(prev => [...prev, ...newHighlightNodes]);
-      setHighlightedEdges(prev => [...prev, ...newHighlightEdges]);
-
-      setTimeout(() => {
-        setScorePopups(prev => prev.filter(p => !newPopups.find(np => np.id === p.id)));
-        setHighlightedNodes(prev => prev.filter(n => !newHighlightNodes.find(nn => nn === n)));
-        setHighlightedEdges(prev => prev.filter(e => !newHighlightEdges.find(ne => ne === e)));
-      }, 2000);
-    }
+    runAnimations();
   };
 
   if (!hasMounted) return null;
