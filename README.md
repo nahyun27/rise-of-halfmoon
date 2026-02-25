@@ -12,6 +12,10 @@ https://doodles.google/doodle/rise-of-the-half-moon/
 
 [![Live Demo](https://img.shields.io/badge/🌙-Play%20Now-blue?style=for-the-badge)](https://rise-of-halfmoon.vercel.app/)
 
+## 🎮 Gameplay Preview
+
+![Gameplay](./public/demo.gif)
+
 ## 🎴 Game Rules
 
 ### Scoring Methods
