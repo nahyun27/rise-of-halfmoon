@@ -2,6 +2,8 @@
 
 > Strategic moon phase card game - Battle the Half Moon
 
+[![Live Demo](https://img.shields.io/badge/🌙-Play%20Now-blue?style=for-the-badge)](https://rise-of-halfmoon.vercel.app/)
+
 A card game where you connect moon phases to score points. Match same phases, create lunar cycles, and outsmart your opponent!
 
 This project is a clone coding of the Google Doodle Moon game.  
@@ -9,8 +11,6 @@ I am a big fan of the Google Doodle Moon game, so I decided to recreate it mysel
 
 Original game:  
 https://doodles.google/doodle/rise-of-the-half-moon/
-
-[![Live Demo](https://img.shields.io/badge/🌙-Play%20Now-blue?style=for-the-badge)](https://rise-of-halfmoon.vercel.app/)
 
 ## 🎮 Gameplay Preview
 
