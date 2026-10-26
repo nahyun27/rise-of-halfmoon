@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { MotionConfig, AnimatePresence, motion } from 'framer-motion';
+import { MotionConfig, AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { MoonCard } from "../components/MoonCard";
 import { MoonCard as MoonCardType, GameState, GamePhase } from "../types/game";
 import { evaluateGraphPlacement, ScoringEvent } from "../utils/scoring";
@@ -112,6 +112,9 @@ export default function Home() {
   const [multipleChainsPopup, setMultipleChainsPopup] = useState<{ count: number, points: number } | null>(null);
   const [aiPlayOffset, setAiPlayOffset] = useState({ x: 0, y: 0 });
   const [isAnimating, setIsAnimating] = useState(false);
+  // A tapped card flying from the hand to its slot; dragged cards skip this
+  const [playerPlay, setPlayerPlay] = useState<{ cardId: string, x: number, y: number, scale: number } | null>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   // Visual effects state
   const [scorePopups, setScorePopups] = useState<ScorePopupData[]>([]);
@@ -568,7 +571,7 @@ export default function Home() {
               const nodeEl = document.getElementById(`node-${id}`);
               if (nodeEl) {
                 const isPlaced = id === nodeId;
-                nodeEl.animate([
+                const glow = nodeEl.animate([
                   { transform: 'scale(1)', boxShadow: '0 0 0px rgba(168,85,247,0)', borderColor: 'transparent', zIndex: 10 },
                   { transform: `scale(${isPlaced ? 1.05 : 1.05})`, boxShadow: `0 0 ${isPlaced ? '40px' : '30px'} rgba(168,85,247,1)`, borderColor: '#a855f7', zIndex: 50 },
                   { transform: `scale(${isPlaced ? 1.02 : 1.02})`, boxShadow: `0 0 ${isPlaced ? '25px' : '20px'} rgba(168,85,247,0.8)`, borderColor: '#a855f7', zIndex: 30 }
@@ -578,9 +581,9 @@ export default function Home() {
                   fill: 'forwards'
                 });
 
-                setTimeout(() => {
-                  if (nodeEl) nodeEl.style.transform = '';
-                }, 2600);
+                // Hold the glow while the cycle is highlighted, then drop it. A forwards-filled
+                // animation outlives inline style changes, so it has to be cancelled.
+                setTimeout(() => glow.cancel(), 2600);
               }
 
               if (i < cLength - 1) {
@@ -654,6 +657,26 @@ export default function Home() {
   const outcome = OUTCOME_BY_PHASE[gameState.phase];
   const selectedCard = gameState.playerHand.find(c => c.id === selectedCardId) ?? null;
   const isPlayerTurn = gameState.phase === 'playing' && gameState.currentTurn === 'player' && !isAnimating;
+
+  // Tap-to-place: fly the selected card onto the slot like the AI's cards do, then place it
+  const placeSelectedCard = (nodeId: string) => {
+    const cardId = selectedCardId;
+    if (!cardId || playerPlay || !isPlayerTurn || !isValidPlacement(nodeId)) return;
+    const cardEl = document.getElementById(`hand-card-${cardId}`);
+    const nodeEl = document.getElementById(`node-${nodeId}`);
+    if (prefersReducedMotion || !cardEl || !nodeEl) {
+      handleNodeClick(nodeId, cardId);
+      return;
+    }
+    const from = cardEl.getBoundingClientRect();
+    const to = nodeEl.getBoundingClientRect();
+    setHoveredNodeId(null);
+    setPlayerPlay({ cardId, x: to.left - from.left, y: to.top - from.top, scale: to.width / from.width });
+    setTimeout(() => {
+      handleNodeClick(nodeId, cardId);
+      setPlayerPlay(null);
+    }, 450);
+  };
 
   let playerStatus = `${gameState.playerDrawPile.length} in deck`;
   if (gameState.phase === 'endGameCounting') playerStatus = 'Counting the board…';
@@ -738,18 +761,18 @@ export default function Home() {
 
           <Board
             layout={layout}
-            selectedCard={selectedCard}
+            selectedCard={playerPlay ? null : selectedCard}
             hoveredNodeId={hoveredNodeId}
             highlightedNodes={highlightedNodes}
             highlightedEdges={highlightedEdges}
             scorePopups={scorePopups}
             isValidPlacement={isValidPlacement}
-            onNodeClick={nodeId => handleNodeClick(nodeId)}
+            onNodeClick={placeSelectedCard}
             onNodeDrop={(nodeId, cardId) => handleNodeClick(nodeId, cardId, false)}
             onNodeHover={setHoveredNodeId}
           />
 
-          <PlayerPanel className="z-30" side="player" name="YOU" score={gameState.playerScore} status={playerStatus} isActive={isPlayerTurn}>
+          <PlayerPanel className={playerPlay ? 'z-[60]' : 'z-30'} side="player" name="YOU" score={gameState.playerScore} status={playerStatus} isActive={isPlayerTurn}>
             {gameState.playerHand.map(card => {
               const isSelected = selectedCardId === card.id;
               return (
@@ -758,7 +781,7 @@ export default function Home() {
                   card={card}
                   isSelected={isSelected}
                   onClick={() => {
-                    if (isPlayerTurn) {
+                    if (isPlayerTurn && !playerPlay) {
                       if (!isSelected) playSelectSound();
                       setSelectedCardId(isSelected ? null : card.id);
                     }
@@ -766,6 +789,7 @@ export default function Home() {
                   onDragStart={() => setSelectedCardId(card.id)}
                   onDragEnd={() => setSelectedCardId(null)}
                   disabled={!isPlayerTurn}
+                  flyTo={playerPlay?.cardId === card.id ? playerPlay : null}
                 />
               );
             })}

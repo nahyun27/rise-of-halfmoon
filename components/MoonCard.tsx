@@ -1,6 +1,5 @@
 import React from 'react';
 import { MoonCard as MoonCardType } from '../types/game';
-import { OWNER_COLORS } from '../constants/theme';
 import { MoonPhase } from './MoonPhase';
 
 interface MoonCardProps {
@@ -28,27 +27,32 @@ export function MoonCard({ card, isFaceDown = false, className = 'size-card' }: 
     );
   }
 
-  const owner = card.scoredBy;
-  const ownerColor = owner ? OWNER_COLORS[owner] : null;
+  const surface = CARD_SURFACES[card.scoredBy ?? 'neutral'];
 
   return (
     <div
-      className={`${className} relative rounded-[22%] flex items-center justify-center select-none transition-shadow duration-500`}
-      style={{
-        background: 'linear-gradient(160deg, #1f2257 0%, #13153a 55%, #0c0d2a 100%)',
-        boxShadow: ownerColor
-          ? `0 0 0 2.5px ${ownerColor}, 0 0 18px -2px ${ownerColor}, 0 8px 18px -6px rgba(0,0,0,0.7)`
-          : '0 0 0 1px rgba(255,255,255,0.09), 0 8px 18px -6px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.07)',
-      }}
+      className={`${className} relative rounded-[22%] flex items-center justify-center select-none`}
+      style={{ background: surface.background, boxShadow: surface.shadow }}
     >
       <MoonPhase phase={card.phase} className="w-[74%] h-[74%]" />
-      {owner && (
-        <span
-          className="absolute -top-1 -right-1 size-[18%] min-w-2 min-h-2 rounded-full border-2 border-night-900"
-          style={{ background: ownerColor! }}
-          aria-label={owner === 'player' ? 'Scored by you' : 'Scored by Half Moon'}
-        />
-      )}
+      {card.scoredBy && <span className="sr-only">{card.scoredBy === 'player' ? 'Scored by you' : 'Scored by Half Moon'}</span>}
     </div>
   );
 }
+
+// Ownership is shown by the card surface, not a border, so it never competes with
+// the colored rings that highlight pairs, full moons and cycles.
+const CARD_SURFACES: Record<'neutral' | 'player' | 'opponent', { background: string, shadow: string }> = {
+  neutral: {
+    background: 'linear-gradient(160deg, #1f2257 0%, #13153a 55%, #0c0d2a 100%)',
+    shadow: '0 0 0 1px rgba(255,255,255,0.09), 0 8px 18px -6px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.07)',
+  },
+  player: {
+    background: 'linear-gradient(160deg, #8a96e6 0%, #6672c4 50%, #4d58a6 100%)',
+    shadow: '0 0 0 1px rgba(255,255,255,0.25), 0 8px 20px -6px rgba(110,125,230,0.55), inset 0 1px 0 rgba(255,255,255,0.35)',
+  },
+  opponent: {
+    background: 'linear-gradient(160deg, #1c0f1f 0%, #110916 55%, #09060d 100%)',
+    shadow: '0 0 0 1px rgba(255,255,255,0.04), 0 8px 18px -6px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,140,160,0.08)',
+  },
+};
