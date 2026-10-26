@@ -8,12 +8,14 @@ import { playLevelStartSound } from '../utils/sounds';
 interface LevelIntroProps {
   levelNumber: number;
   levelName: string;
+  // Replaces the "Level N" line, e.g. for the daily challenge
+  eyebrow?: string;
   onComplete: () => void;
 }
 
 const INTRO_MS = 2800;
 
-export function LevelIntro({ levelNumber, levelName, onComplete }: LevelIntroProps) {
+export function LevelIntro({ levelNumber, levelName, eyebrow, onComplete }: LevelIntroProps) {
   const [leaving, setLeaving] = useState(false);
   // The moon waxes from new to full while the intro plays
   const [phase, setPhase] = useState(0);
@@ -79,7 +81,7 @@ export function LevelIntro({ levelNumber, levelName, onComplete }: LevelIntroPro
         transition={{ delay: 0.15, duration: 0.5 }}
         className="text-xs sm:text-sm font-semibold tracking-[0.6em] pl-[0.6em] uppercase text-ink-muted"
       >
-        Level {levelNumber}
+        {eyebrow ?? `Level ${levelNumber}`}
       </motion.p>
       <motion.h1
         initial={{ y: 16, opacity: 0, letterSpacing: '0.5em' }}

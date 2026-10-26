@@ -1,16 +1,34 @@
 "use client";
 
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { MoonPhase } from './MoonPhase';
 import { Button, IconButton } from './ui/Button';
-import { BookIcon, GithubIcon, MapPinIcon, PlayIcon, SoundOffIcon, SoundOnIcon, TrophyIcon } from './ui/Icons';
+import { BookIcon, ChartIcon, GithubIcon, PlayIcon, SoundOffIcon, SoundOnIcon } from './ui/Icons';
+import { DailyCard } from './DailyCard';
+import { LevelPath } from './LevelPath';
+import { RecordsModal } from './RecordsModal';
+import { LEVEL_LAYOUTS } from '../constants/layouts';
+import { DailyResult, Records } from '../utils/records';
+
+export interface DailyInfo {
+  key: string;
+  number: number;
+  boardName: string;
+  result: DailyResult | undefined;
+  streak: number;
+  shareText: string | null;
+}
 
 interface StartScreenProps {
   onStartGame: () => void;
   onShowTutorial: () => void;
+  onSelectLevel: (index: number) => void;
+  onPlayDaily: () => void;
   currentLevel: number;
   bestLevel: number;
+  records: Records;
+  daily: DailyInfo;
   isMuted: boolean;
   onToggleMute: () => void;
 }
@@ -27,18 +45,31 @@ const item = {
   visible: { y: 0, opacity: 1, transition: { duration: 0.6, ease: 'easeOut' as const } },
 };
 
-export function StartScreen({ onStartGame, onShowTutorial, currentLevel, bestLevel, isMuted, onToggleMute }: StartScreenProps) {
+export function StartScreen({
+  onStartGame,
+  onShowTutorial,
+  onSelectLevel,
+  onPlayDaily,
+  currentLevel,
+  bestLevel,
+  records,
+  daily,
+  isMuted,
+  onToggleMute,
+}: StartScreenProps) {
+  const [showRecords, setShowRecords] = useState(false);
+
   return (
-    <main className="relative min-h-dvh w-full flex flex-col items-center justify-center px-4 py-10 overflow-x-hidden">
+    <main className="relative min-h-dvh w-full flex flex-col items-center justify-center px-4 py-12 overflow-x-hidden">
       <div className="absolute top-[max(16px,env(safe-area-inset-top))] right-4">
         <IconButton label={isMuted ? 'Unmute music' : 'Mute music'} onClick={onToggleMute}>
           {isMuted ? <SoundOffIcon size={18} /> : <SoundOnIcon size={18} />}
         </IconButton>
       </div>
 
-      <motion.div variants={container} initial="hidden" animate="visible" className="w-full max-w-md flex flex-col items-center text-center">
+      <motion.div variants={container} initial="hidden" animate="visible" className="w-full max-w-xl flex flex-col items-center text-center">
         {/* Lunar cycle arc with the half moon rising in the middle */}
-        <motion.div variants={item} className="relative w-full max-w-[340px] aspect-[2/1] mb-2">
+        <motion.div variants={item} className="relative w-full max-w-[280px] sm:max-w-[340px] aspect-[2/1] mb-2">
           {ARC_PHASES.map((phase, i) => {
             const angle = Math.PI - (i / (ARC_PHASES.length - 1)) * Math.PI;
             return (
@@ -54,7 +85,7 @@ export function StartScreen({ onStartGame, onShowTutorial, currentLevel, bestLev
               </motion.div>
             );
           })}
-          <div className="absolute left-1/2 top-[62%] -translate-x-1/2 -translate-y-1/2 size-28 sm:size-32 animate-float">
+          <div className="absolute left-1/2 top-[62%] -translate-x-1/2 -translate-y-1/2 size-24 sm:size-32 animate-float">
             <div className="absolute inset-0 rounded-full bg-moon/30 blur-3xl" />
             <MoonPhase phase={2} className="relative" />
           </div>
@@ -63,7 +94,7 @@ export function StartScreen({ onStartGame, onShowTutorial, currentLevel, bestLev
         <motion.h1 variants={item} className="font-display font-black leading-none">
           <span className="block text-sm sm:text-base tracking-[0.5em] text-ink-muted pl-[0.5em]">RISE OF THE</span>
           <span
-            className="block mt-3 text-5xl sm:text-6xl tracking-[0.08em] bg-gradient-to-b from-moon-soft via-moon to-[#c99a3e] bg-clip-text text-transparent"
+            className="block mt-3 text-[2.75rem] sm:text-6xl tracking-[0.08em] bg-gradient-to-b from-moon-soft via-moon to-[#c99a3e] bg-clip-text text-transparent"
             style={{ filter: 'drop-shadow(0 0 24px rgba(246,210,122,0.35))' }}
           >
             HALF MOON
@@ -74,21 +105,35 @@ export function StartScreen({ onStartGame, onShowTutorial, currentLevel, bestLev
           A strategic moon phase card game
         </motion.p>
 
-        <motion.div variants={item} className="w-full max-w-xs flex flex-col gap-3 mt-10">
+        <motion.div variants={item} className="w-full max-w-sm flex flex-col gap-3 mt-8">
           <Button variant="primary" size="lg" icon={<PlayIcon size={18} />} onClick={onStartGame}>
             {currentLevel > 1 ? `Continue · Level ${currentLevel}` : 'Start Game'}
           </Button>
-          <Button size="lg" icon={<BookIcon size={18} />} onClick={onShowTutorial}>
-            How to Play
-          </Button>
+          <DailyCard
+            dailyNumber={daily.number}
+            boardName={daily.boardName}
+            result={daily.result}
+            streak={daily.streak}
+            shareText={daily.shareText}
+            onPlay={onPlayDaily}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Button icon={<BookIcon size={16} />} onClick={onShowTutorial} className="px-3! tracking-[0.06em]! whitespace-nowrap">How to Play</Button>
+            <Button icon={<ChartIcon size={16} />} onClick={() => setShowRecords(true)} className="px-3! tracking-[0.06em]! whitespace-nowrap">Records</Button>
+          </div>
         </motion.div>
 
-        <motion.div variants={item} className="flex items-center gap-3 mt-8">
-          <StatChip icon={<MapPinIcon size={14} />} label="Level" value={currentLevel} />
-          <StatChip icon={<TrophyIcon size={14} />} label="Best" value={bestLevel} />
+        <motion.div variants={item} className="w-full max-w-sm mt-8">
+          <LevelPath
+            levels={LEVEL_LAYOUTS}
+            records={records}
+            unlocked={Math.min(bestLevel, LEVEL_LAYOUTS.length)}
+            currentLevel={currentLevel}
+            onSelect={onSelectLevel}
+          />
         </motion.div>
 
-        <motion.div variants={item} className="mt-10 flex flex-col items-center gap-1.5">
+        <motion.div variants={item} className="mt-8 flex flex-col items-center gap-1.5">
           <a
             href="https://github.com/nahyun27/rise-of-halfmoon"
             target="_blank"
@@ -101,16 +146,10 @@ export function StartScreen({ onStartGame, onShowTutorial, currentLevel, bestLev
           <p className="text-[11px] text-ink-faint">Enjoyed it? Star the repo · Found a bug? Open an issue</p>
         </motion.div>
       </motion.div>
-    </main>
-  );
-}
 
-function StatChip({ icon, label, value }: { icon: React.ReactNode, label: string, value: number }) {
-  return (
-    <div className="flex items-center gap-2 pl-3 pr-4 py-2 rounded-full border border-white/[0.08] bg-white/[0.03] backdrop-blur-md">
-      <span className="text-moon">{icon}</span>
-      <span className="text-[10px] font-semibold tracking-[0.25em] uppercase text-ink-faint">{label}</span>
-      <span className="font-sans tracking-tight font-bold text-ink tabular-nums">{value}</span>
-    </div>
+      <AnimatePresence>
+        {showRecords && <RecordsModal key="records" records={records} todayKey={daily.key} onClose={() => setShowRecords(false)} />}
+      </AnimatePresence>
+    </main>
   );
 }
