@@ -1,58 +1,54 @@
-"use client";
-
 import React from 'react';
 import { MoonCard as MoonCardType } from '../types/game';
-
-const MOON_EMOJIS = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
+import { OWNER_COLORS } from '../constants/theme';
+import { MoonPhase } from './MoonPhase';
 
 interface MoonCardProps {
-  card: MoonCardType;
-  onClick?: (card: MoonCardType) => void;
+  card: Pick<MoonCardType, 'phase' | 'scoredBy'>;
   isFaceDown?: boolean;
+  className?: string;
 }
 
-export const MoonCard: React.FC<MoonCardProps> = ({ card, onClick, isFaceDown = false }) => {
-  const getBorderColor = () => {
-    if (!card.scoredBy) return 'border-transparent shadow-none';
+export function MoonCard({ card, isFaceDown = false, className = 'size-card' }: MoonCardProps) {
+  if (isFaceDown) {
+    return (
+      <div
+        className={`${className} relative rounded-[22%] overflow-hidden border border-opponent/25 select-none`}
+        style={{
+          background: 'linear-gradient(155deg, #2a1d4a 0%, #171433 60%, #110f28 100%)',
+          boxShadow: '0 8px 18px -6px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06)',
+        }}
+        aria-label="Face-down card"
+      >
+        <div className="absolute inset-[12%] rounded-[18%] border border-opponent/20 bg-[radial-gradient(circle_at_50%_50%,rgba(255,122,144,0.18),transparent_65%)]" />
+        <svg viewBox="0 0 100 100" className="absolute inset-0 m-auto w-[44%] h-[44%] opacity-70" aria-hidden="true">
+          <path d="M60 18a32 32 0 1 0 22 54A28 28 0 0 1 60 18z" fill="none" stroke="#ff9aab" strokeWidth="5" strokeLinejoin="round" />
+        </svg>
+      </div>
+    );
+  }
 
-    switch (card.scoredBy) {
-      case 'player': return 'border-white shadow-[0_0_12px_rgba(255,255,255,0.4)]';
-      case 'opponent': return 'border-black shadow-[0_0_15px_rgba(0,0,0,0.8)]';
-      default: return 'border-transparent shadow-none';
-    }
-  };
+  const owner = card.scoredBy;
+  const ownerColor = owner ? OWNER_COLORS[owner] : null;
 
   return (
     <div
-      onClick={() => onClick?.(card)}
-      className={`
-        group relative w-[50px] h-[50px] sm:w-[60px] sm:h-[60px] md:w-[72px] md:h-[72px]
-        rounded-[8px]
-        border-[3px]
-        flex items-center justify-center
-        p-1 sm:p-2
-        bg-gradient-to-b from-[#1a1a2e] to-[#16213e]
-        cursor-pointer select-none
-        transition-all duration-300 ease-out
-        hover:scale-105 hover:-translate-y-1
-        hover:shadow-[0_0_20px_rgba(255,255,255,0.4)] hover:brightness-110
-        active:scale-95 active:translate-y-0
-        ${getBorderColor()}
-      `}
+      className={`${className} relative rounded-[22%] flex items-center justify-center select-none transition-shadow duration-500`}
       style={{
-        boxShadow: card.scoredBy === 'player' ? '0 0 15px rgba(255,255,255,0.3)' :
-          card.scoredBy === 'opponent' ? '0 0 15px rgba(0,0,0,0.4)' : undefined
+        background: 'linear-gradient(160deg, #1f2257 0%, #13153a 55%, #0c0d2a 100%)',
+        boxShadow: ownerColor
+          ? `0 0 0 2.5px ${ownerColor}, 0 0 18px -2px ${ownerColor}, 0 8px 18px -6px rgba(0,0,0,0.7)`
+          : '0 0 0 1px rgba(255,255,255,0.09), 0 8px 18px -6px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.07)',
       }}
     >
-      {isFaceDown ? (
-        <div className="flex-grow flex items-center justify-center opacity-40 text-3xl sm:text-4xl drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-          🌙
-        </div>
-      ) : (
-        <div className="text-[28px] sm:text-[32px] md:text-[34px] filter drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-transform duration-300 group-hover:scale-110 flex-grow flex items-center justify-center">
-          {MOON_EMOJIS[card.phase]}
-        </div>
+      <MoonPhase phase={card.phase} className="w-[74%] h-[74%]" />
+      {owner && (
+        <span
+          className="absolute -top-1 -right-1 size-[18%] min-w-2 min-h-2 rounded-full border-2 border-night-900"
+          style={{ background: ownerColor! }}
+          aria-label={owner === 'player' ? 'Scored by you' : 'Scored by Half Moon'}
+        />
       )}
     </div>
   );
-};
+}
