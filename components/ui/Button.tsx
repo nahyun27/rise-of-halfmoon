@@ -43,15 +43,18 @@ export function Button({ variant = 'secondary', size = 'md', icon, className = '
 
 interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   label: string;
+  size?: 'sm' | 'md' | 'lg';
 }
 
-export function IconButton({ label, className = '', children, ...props }: IconButtonProps) {
+const ICON_SIZES = { sm: 'size-9', md: 'size-10', lg: 'size-11' };
+
+export function IconButton({ label, size = 'md', className = '', children, ...props }: IconButtonProps) {
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
-      className={`inline-flex items-center justify-center size-10 rounded-full cursor-pointer
+      className={`inline-flex items-center justify-center ${ICON_SIZES[size]} rounded-full cursor-pointer
         text-ink-muted bg-white/[0.04] border border-white/10 backdrop-blur-md
         hover:text-ink hover:bg-white/[0.08] hover:border-white/20 active:scale-95 transition-all duration-200
         ${className}`}

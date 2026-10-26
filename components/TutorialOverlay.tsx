@@ -248,7 +248,7 @@ export function TutorialOverlay({ onClose }: TutorialOverlayProps) {
         className="relative w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] flex flex-col rounded-3xl overflow-hidden bg-gradient-to-b from-night-800/95 to-night-900/95 border border-white/10"
         style={{ boxShadow: '0 30px 80px -20px rgba(0,0,0,0.8), 0 0 60px -10px rgba(139,123,255,0.35)' }}
       >
-        <IconButton label="Close tutorial" onClick={onClose} className="absolute top-3 right-3 z-10 size-9">
+        <IconButton label="Close tutorial" size="sm" onClick={onClose} className="absolute top-3 right-3 z-10">
           <CloseIcon size={16} />
         </IconButton>
 
@@ -280,7 +280,7 @@ export function TutorialOverlay({ onClose }: TutorialOverlayProps) {
         </div>
 
         <div className="shrink-0 border-t border-white/[0.07] px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
-          <Button variant="ghost" onClick={onClose} className="px-3">Skip</Button>
+          <Button variant="ghost" onClick={onClose} className="px-3!">Skip</Button>
 
           <div className="flex gap-1.5" role="tablist" aria-label="Tutorial steps">
             {tutorialSteps.map((s, i) => (
@@ -297,13 +297,13 @@ export function TutorialOverlay({ onClose }: TutorialOverlayProps) {
           </div>
 
           <div className="flex gap-2">
-            <IconButton label="Previous step" onClick={() => goTo(step - 1)} disabled={step === 0} className="size-11 disabled:opacity-30 disabled:pointer-events-none">
+            <IconButton label="Previous step" size="lg" onClick={() => goTo(step - 1)} disabled={step === 0} className="disabled:opacity-30 disabled:pointer-events-none">
               <ArrowLeftIcon size={18} />
             </IconButton>
             {isLast ? (
               <Button variant="primary" onClick={onClose} autoFocus>Let&apos;s go</Button>
             ) : (
-              <IconButton label="Next step" onClick={() => goTo(step + 1)} className="size-11 text-ink bg-accent/20 border-accent/40 hover:bg-accent/30">
+              <IconButton label="Next step" size="lg" onClick={() => goTo(step + 1)} className="text-ink! bg-accent/20! border-accent/40! hover:bg-accent/30!">
                 <ArrowRightIcon size={18} />
               </IconButton>
             )}
