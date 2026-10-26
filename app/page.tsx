@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MotionConfig, AnimatePresence, motion } from 'framer-motion';
 import { MoonCard } from "../components/MoonCard";
 import { MoonCard as MoonCardType, GameState, GamePhase } from "../types/game";
@@ -18,8 +18,24 @@ import { PlayerPanel } from "../components/game/PlayerPanel";
 import { TopBar } from "../components/game/TopBar";
 import { Announcements } from "../components/game/Announcements";
 import { PauseMenu } from "../components/game/PauseMenu";
-import { GameOutcome, ResultScreen } from "../components/game/ResultScreen";
+import { CampaignSummary, DailySummary, GameOutcome, ResultScreen } from "../components/game/ResultScreen";
 import { useBackgroundMusic } from "../hooks/useBackgroundMusic";
+import {
+  buildShareText,
+  emptyRecords,
+  EMPTY_STATS,
+  GameStats,
+  getDailyKey,
+  getDailyNumber,
+  getDailyStreak,
+  loadRecords,
+  recordCampaignGame,
+  recordDailyGame,
+  Records,
+  saveRecords,
+  starThresholds,
+} from "../utils/records";
+import { hashString, mulberry32, Rng } from "../utils/random";
 import {
   playChainSound,
   playCompletionSound,
@@ -33,12 +49,23 @@ import {
 
 type HighlightType = ScoreType;
 
-const generateDeck = (size: number, owner: 'player' | 'opponent'): MoonCardType[] => {
+const generateDeck = (size: number, owner: 'player' | 'opponent', rng: Rng = Math.random): MoonCardType[] => {
   return Array(size).fill(null).map((_, i) => ({
     id: `${owner}-deck-${Date.now()}-${i}-${Math.random()}`,
-    phase: Math.floor(Math.random() * 8),
+    phase: Math.floor(rng() * 8),
     owner
   }));
+};
+
+type GameMode = 'campaign' | 'daily';
+
+// Each day's challenge cycles through the level boards
+const dailyLayoutIndex = (dailyNumber: number) =>
+  (((dailyNumber - 1) % LEVEL_LAYOUTS.length) + LEVEL_LAYOUTS.length) % LEVEL_LAYOUTS.length;
+
+const needsTutorial = () => {
+  const seenTut = localStorage.getItem('halfmoon_hasSeenTutorial');
+  return !seenTut || seenTut === 'false';
 };
 
 const INITIAL_DECK_SIZE = 30; // 3 in hand, 27 in draw pile.
@@ -55,6 +82,14 @@ export default function Home() {
   const [currentLevelIndex, setCurrentLevelIndex] = useState(0);
 
   const { isMuted, toggleMute } = useBackgroundMusic();
+
+  const [mode, setMode] = useState<GameMode>('campaign');
+  const [records, setRecords] = useState<Records>(emptyRecords);
+  // Date of the daily challenge currently being played
+  const [dailyKey, setDailyKey] = useState<string | null>(null);
+  const [resultSummary, setResultSummary] = useState<{ stats: GameStats, campaign?: CampaignSummary, daily?: DailySummary } | null>(null);
+  // The player's scoring this game; a ref because it only matters once the game ends
+  const statsRef = useRef<GameStats>({ ...EMPTY_STATS });
 
   const [gameState, setGameState] = useState<GameState>({
     phase: 'start',
@@ -98,13 +133,17 @@ export default function Home() {
 
     setCurrentLevelIndex(startLvl);
     setBestLevelReached(startBest);
+    setRecords(loadRecords());
 
     resetGameToLevel(startLvl, 'start');
   }, []);
 
-  const resetGameToLevel = (levelIndex: number, phase: GamePhase) => {
-    const pDeck = generateDeck(INITIAL_DECK_SIZE, 'player');
-    const oDeck = generateDeck(INITIAL_DECK_SIZE, 'opponent');
+  const resetGameToLevel = (levelIndex: number, phase: GamePhase, options: { mode?: GameMode, rng?: Rng } = {}) => {
+    const pDeck = generateDeck(INITIAL_DECK_SIZE, 'player', options.rng);
+    const oDeck = generateDeck(INITIAL_DECK_SIZE, 'opponent', options.rng);
+    setMode(options.mode ?? 'campaign');
+    statsRef.current = { ...EMPTY_STATS };
+    setResultSummary(null);
     setGameState({
       phase,
       layout: JSON.parse(JSON.stringify(LEVEL_LAYOUTS[levelIndex])),
@@ -170,26 +209,42 @@ export default function Home() {
         await delay(1500);
 
         // 4. Decide Winner
-        if (currentPlayerScore > currentOpponentScore) {
-          playGameOverSound('win');
-          const nextLvl = currentLevelIndex + 1;
-          const nextBest = Math.max(bestLevelReached, nextLvl + 1);
-          setBestLevelReached(nextBest);
-          localStorage.setItem('halfmoon_bestLevel', nextBest.toString());
-          setGameState(prev => ({ ...prev, phase: 'levelWin' }));
-        } else if (currentPlayerScore < currentOpponentScore) {
-          playGameOverSound('lose');
-          setGameState(prev => ({ ...prev, phase: 'gameOver' }));
+        const outcome: GameOutcome = currentPlayerScore > currentOpponentScore ? 'win' : currentPlayerScore < currentOpponentScore ? 'lose' : 'draw';
+        if (outcome === 'draw') playDrawSound();
+        else playGameOverSound(outcome);
+
+        // 5. Save records
+        const stats = { ...statsRef.current };
+        if (mode === 'daily' && dailyKey) {
+          const result = { outcome, playerScore: currentPlayerScore, opponentScore: currentOpponentScore, stats };
+          const next = recordDailyGame(records, dailyKey, result);
+          setRecords(next);
+          saveRecords(next);
+          const number = getDailyNumber(dailyKey);
+          const shareText = buildShareText(number, next.daily[dailyKey] ?? result, getDailyStreak(next, dailyKey), window.location.origin);
+          setResultSummary({ stats, daily: { number, shareText } });
         } else {
-          // DRAW - scores are equal
-          playDrawSound();
-          setGameState(prev => ({ ...prev, phase: 'draw' }));
+          const { layout } = gameState;
+          const res = recordCampaignGame(records, layout.levelNumber, layout.nodes.length, outcome, currentPlayerScore, currentOpponentScore, stats);
+          setRecords(res.records);
+          saveRecords(res.records);
+          setResultSummary({
+            stats,
+            campaign: { stars: res.stars, previousStars: res.previousStars, targets: starThresholds(layout.nodes.length), isNewBestScore: res.isNewBestScore },
+          });
+          if (outcome === 'win') {
+            const nextBest = Math.max(bestLevelReached, currentLevelIndex + 2);
+            setBestLevelReached(nextBest);
+            localStorage.setItem('halfmoon_bestLevel', nextBest.toString());
+          }
         }
+
+        setGameState(prev => ({ ...prev, phase: outcome === 'win' ? 'levelWin' : outcome === 'lose' ? 'gameOver' : 'draw' }));
       };
 
       renderCounting();
     }
-  }, [isGameOver, isAnimating, gameState.phase, gameState.playerScore, gameState.opponentScore, currentLevelIndex, bestLevelReached]);
+  }, [isGameOver, isAnimating, gameState.phase, gameState.playerScore, gameState.opponentScore, currentLevelIndex, bestLevelReached, mode, dailyKey, records]);
 
   const handleNextLevel = () => {
     const next = currentLevelIndex + 1;
@@ -216,12 +271,27 @@ export default function Home() {
   };
 
   const startGame = () => {
-    const seenTut = localStorage.getItem('halfmoon_hasSeenTutorial');
-    if (!seenTut || seenTut === 'false') {
-      setGameState(prev => ({ ...prev, phase: 'tutorial' }));
-    } else {
-      setGameState(prev => ({ ...prev, phase: 'levelIntro' }));
-    }
+    resetGameToLevel(currentLevelIndex, needsTutorial() ? 'tutorial' : 'levelIntro');
+  };
+
+  // Replay any unlocked level, e.g. to earn more stars
+  const selectLevel = (levelIndex: number) => {
+    setCurrentLevelIndex(levelIndex);
+    localStorage.setItem('halfmoon_currentLevel', levelIndex.toString());
+    resetGameToLevel(levelIndex, needsTutorial() ? 'tutorial' : 'levelIntro');
+  };
+
+  const todayKey = getDailyKey();
+  const todayDailyNumber = getDailyNumber(todayKey);
+
+  const startDaily = () => {
+    if (records.daily[todayKey]) return;
+    setDailyKey(todayKey);
+    // Everyone gets the same decks today
+    resetGameToLevel(dailyLayoutIndex(todayDailyNumber), needsTutorial() ? 'tutorial' : 'levelIntro', {
+      mode: 'daily',
+      rng: mulberry32(hashString(`daily:${todayKey}`)),
+    });
   };
 
   const openTutorial = () => {
@@ -230,6 +300,10 @@ export default function Home() {
 
   // Going to the menu keeps whatever progress the result earned
   const handleMenuFromResult = (outcome: GameOutcome) => {
+    if (mode === 'daily') {
+      resetGameToLevel(currentLevelIndex, 'start');
+      return;
+    }
     let levelIndex = currentLevelIndex;
     if (outcome === 'win') levelIndex = currentLevelIndex + 1 < LEVEL_LAYOUTS.length ? currentLevelIndex + 1 : 0;
     else if (outcome === 'lose') levelIndex = 0;
@@ -263,7 +337,7 @@ export default function Home() {
         setAiActionState({ phase: 'thinking', cardId: null, targetNodeId: null });
         await delay(800);
 
-        const difficulty = currentLevelIndex > 2 ? 2 : currentLevelIndex;
+        const difficulty = mode === 'daily' ? 2 : Math.min(currentLevelIndex, 2);
         const move = aiTurn(gameState, difficulty);
 
         if (!move) {
@@ -294,7 +368,7 @@ export default function Home() {
       };
       executeAiTurn();
     }
-  }, [gameState.phase, gameState.currentTurn, isGameOver, isAnimating, aiActionState.phase, currentLevelIndex]);
+  }, [gameState.phase, gameState.currentTurn, isGameOver, isAnimating, aiActionState.phase, currentLevelIndex, mode]);
 
   const isValidPlacement = (nodeId: string) => {
     const node = gameState.layout.nodes.find(n => n.id === nodeId);
@@ -324,6 +398,20 @@ export default function Home() {
     );
 
     const events = evaluateGraphPlacement(newNodes, nodeId);
+
+    if (!isAiTurn) {
+      const stats = statsRef.current;
+      for (const event of events) {
+        if (event.type === 'PAIR') stats.pairs++;
+        else if (event.type === 'FULL_MOON') stats.fullMoons++;
+        else {
+          stats.cycles++;
+          stats.longestCycle = Math.max(stats.longestCycle, event.nodeIds.length);
+          const stealsCards = event.nodeIds.some(id => newNodes.find(n => n.id === id)?.card?.scoredBy === 'opponent');
+          if (stealsCards) stats.steals++;
+        }
+      }
+    }
 
     const chainEvents = events.filter(e => e.type === 'CHAIN');
     const fullMoonEvents = events.filter(e => e.type === 'FULL_MOON');
@@ -558,7 +646,10 @@ export default function Home() {
   // --------------------------------------------------------------------------
 
   const layout = gameState.layout;
-  const levelLabel = `Level ${layout.levelNumber} · ${layout.name}`;
+  const isDaily = mode === 'daily';
+  const playingDailyNumber = dailyKey ? getDailyNumber(dailyKey) : todayDailyNumber;
+  const levelLabel = isDaily ? layout.name : `Level ${layout.levelNumber} · ${layout.name}`;
+  const levelEyebrow = isDaily ? `Daily #${playingDailyNumber}` : `Level ${layout.levelNumber}`;
   const theme = BOARD_THEMES[layout.theme || 'indigo'];
   const outcome = OUTCOME_BY_PHASE[gameState.phase];
   const selectedCard = gameState.playerHand.find(c => c.id === selectedCardId) ?? null;
@@ -578,8 +669,21 @@ export default function Home() {
       <StartScreen
         onStartGame={startGame}
         onShowTutorial={openTutorial}
+        onSelectLevel={selectLevel}
+        onPlayDaily={startDaily}
         currentLevel={currentLevelIndex + 1}
         bestLevel={bestLevelReached}
+        records={records}
+        daily={{
+          key: todayKey,
+          number: todayDailyNumber,
+          boardName: LEVEL_LAYOUTS[dailyLayoutIndex(todayDailyNumber)].name,
+          result: records.daily[todayKey],
+          streak: getDailyStreak(records, todayKey),
+          shareText: records.daily[todayKey]
+            ? buildShareText(todayDailyNumber, records.daily[todayKey], getDailyStreak(records, todayKey), window.location.origin)
+            : null,
+        }}
         isMuted={isMuted}
         onToggleMute={toggleMute}
       />
@@ -589,6 +693,7 @@ export default function Home() {
       <LevelIntro
         levelNumber={layout.levelNumber}
         levelName={layout.name}
+        eyebrow={levelEyebrow}
         onComplete={() => setGameState(prev => ({ ...prev, phase: 'playing' }))}
       />
     );
@@ -597,7 +702,7 @@ export default function Home() {
       <main className="relative flex h-dvh w-full flex-col items-center overflow-hidden px-3 sm:px-6 pt-[max(12px,env(safe-area-inset-top))] pb-[max(12px,env(safe-area-inset-bottom))] sm:pt-5 sm:pb-5">
         <div className="w-full max-w-3xl shrink-0 z-30">
           <TopBar
-            levelNumber={layout.levelNumber}
+            eyebrow={levelEyebrow}
             levelName={layout.name}
             isMuted={isMuted}
             onPause={() => setIsPaused(true)}
@@ -679,7 +784,7 @@ export default function Home() {
           {isPaused && (
             <PauseMenu
               key="pause"
-              levelLabel={levelLabel}
+              levelLabel={isDaily ? `${levelEyebrow} · ${layout.name}` : levelLabel}
               playerScore={gameState.playerScore}
               opponentScore={gameState.opponentScore}
               onResume={() => setIsPaused(false)}
@@ -694,10 +799,13 @@ export default function Home() {
             />
           )}
 
-          {outcome && (
+          {outcome && resultSummary && (
             <ResultScreen
               key="result"
               outcome={outcome}
+              stats={resultSummary.stats}
+              campaign={resultSummary.campaign}
+              daily={resultSummary.daily}
               levelLabel={levelLabel}
               playerScore={gameState.playerScore}
               opponentScore={gameState.opponentScore}
