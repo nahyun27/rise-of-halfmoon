@@ -96,7 +96,9 @@ export function Board({
         {/* Connections */}
         <svg className="absolute inset-0 w-full h-full pointer-events-none overflow-visible" aria-hidden="true">
           <defs>
-            <filter id="edge-glow" x="-50%" y="-50%" width="200%" height="200%">
+            {/* userSpaceOnUse: a horizontal or vertical line has a zero-height/width bounding box,
+                so the default objectBoundingBox filter region would clip it away entirely */}
+            <filter id="edge-glow" filterUnits="userSpaceOnUse" x="0" y="0" width="100%" height="100%">
               <feGaussianBlur stdDeviation="3" result="blur" />
               <feMerge>
                 <feMergeNode in="blur" />
