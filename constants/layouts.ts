@@ -49,15 +49,26 @@ function createCircularLayout(nodeCount: number, centerX: number, centerY: numbe
 }
 
 function createSpiralLayout(nodeCount: number, centerX: number, centerY: number): BoardNode[] {
+  // Five nodes per turn, so node i sits directly outside node i - 5
+  const angleStep = (Math.PI * 2) / 5;
+  const innerRadius = 10;
+  const turnSpacing = 11.5;
+  const points = Array.from({ length: nodeCount }, (_, i) => {
+    const angle = -Math.PI / 2 + i * angleStep;
+    const radius = innerRadius + (i * turnSpacing) / 5;
+    return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
+  });
+
+  // The spiral is lopsided; center its bounding box on the board
+  const xs = points.map(p => p.x);
+  const ys = points.map(p => p.y);
+  const offsetX = centerX - (Math.min(...xs) + Math.max(...xs)) / 2;
+  const offsetY = centerY - (Math.min(...ys) + Math.max(...ys)) / 2;
+
   const nodes: BoardNode[] = [];
   for (let i = 0; i < nodeCount; i++) {
-    // spiral out
-    const angle = i * 0.8;
-    const radiusX = 5 + i * 2.5;
-    const radiusY = 5 + i * 2.5;
-
-    const x = centerX + Math.cos(angle) * radiusX;
-    const y = centerY + Math.sin(angle) * radiusY;
+    const x = points[i].x + offsetX;
+    const y = points[i].y + offsetY;
 
     const id = `spir_${i}`;
     const connectedTo: string[] = [];
