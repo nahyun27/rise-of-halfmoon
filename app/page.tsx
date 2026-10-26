@@ -568,7 +568,7 @@ export default function Home() {
               const nodeEl = document.getElementById(`node-${id}`);
               if (nodeEl) {
                 const isPlaced = id === nodeId;
-                nodeEl.animate([
+                const glow = nodeEl.animate([
                   { transform: 'scale(1)', boxShadow: '0 0 0px rgba(168,85,247,0)', borderColor: 'transparent', zIndex: 10 },
                   { transform: `scale(${isPlaced ? 1.05 : 1.05})`, boxShadow: `0 0 ${isPlaced ? '40px' : '30px'} rgba(168,85,247,1)`, borderColor: '#a855f7', zIndex: 50 },
                   { transform: `scale(${isPlaced ? 1.02 : 1.02})`, boxShadow: `0 0 ${isPlaced ? '25px' : '20px'} rgba(168,85,247,0.8)`, borderColor: '#a855f7', zIndex: 30 }
@@ -578,9 +578,9 @@ export default function Home() {
                   fill: 'forwards'
                 });
 
-                setTimeout(() => {
-                  if (nodeEl) nodeEl.style.transform = '';
-                }, 2600);
+                // Hold the glow while the cycle is highlighted, then drop it. A forwards-filled
+                // animation outlives inline style changes, so it has to be cancelled.
+                setTimeout(() => glow.cancel(), 2600);
               }
 
               if (i < cLength - 1) {
