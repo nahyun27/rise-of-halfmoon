@@ -1,239 +1,103 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-
-function playLevelStartSound() {
-  try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-
-    // Mystical ascending arpeggio
-    const notes = [
-      { freq: 261.63, time: 0 },     // C
-      { freq: 329.63, time: 0.15 },  // E
-      { freq: 392.00, time: 0.3 },   // G
-      { freq: 523.25, time: 0.5 },   // C (higher)
-      { freq: 659.25, time: 0.7 }    // E (higher)
-    ];
-
-    notes.forEach(({ freq, time }) => {
-      setTimeout(() => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-
-        osc.frequency.value = freq;
-        osc.type = 'sine';
-
-        // Reverb-like envelope
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.5);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 1.5);
-      }, time * 1000);
-    });
-  } catch (e) {
-    // Ignore audio errors
-  }
-}
-
-function FloatingStars({ count }: { count: number }) {
-  const stars = useMemo(() =>
-    Array.from({ length: count }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 3 + 1,
-      delay: Math.random() * 2
-    }))
-    , [count]);
-
-  return (
-    <>
-      {stars.map(star => (
-        <motion.div
-          key={star.id}
-          className="floating-star"
-          style={{
-            left: `${star.x}%`,
-            top: `${star.y}%`,
-            width: star.size,
-            height: star.size
-          }}
-          animate={{
-            y: [0, -20, 0],
-            opacity: [0.3, 1, 0.3],
-            scale: [1, 1.5, 1]
-          }}
-          transition={{
-            duration: 3,
-            delay: star.delay,
-            repeat: Infinity,
-            ease: 'easeInOut'
-          }}
-        />
-      ))}
-    </>
-  );
-}
-
-function MysticalBackground() {
-  return (
-    <div className="mystical-bg">
-      {/* Radial glow pulse */}
-      <motion.div
-        className="glow-circle"
-        animate={{
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.6, 0.3]
-        }}
-        transition={{
-          duration: 2,
-          repeat: Infinity,
-          ease: 'easeInOut'
-        }}
-      />
-
-      {/* Expanding rings */}
-      {[0, 0.5, 1].map((delay, i) => (
-        <motion.div
-          key={i}
-          className="expanding-ring"
-          initial={{ scale: 0.5, opacity: 0.8 }}
-          animate={{ scale: 2.5, opacity: 0 }}
-          transition={{
-            duration: 2,
-            delay: delay,
-            repeat: Infinity,
-            ease: 'easeOut'
-          }}
-        />
-      ))}
-
-      {/* Floating stars */}
-      <FloatingStars count={30} />
-    </div>
-  );
-}
-
-function OrbitingParticles() {
-  return (
-    <div className="orbit-container">
-      {[0, 60, 120, 180, 240, 300].map((angle, i) => (
-        <motion.div
-          key={i}
-          className="orbiting-particle"
-          style={{
-            transform: `rotate(${angle}deg)`
-          }}
-          animate={{
-            rotate: angle + 360
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: 'linear',
-            delay: i * 0.1
-          }}
-        >
-          <div className="particle-dot" />
-        </motion.div>
-      ))}
-    </div>
-  );
-}
+import React, { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
+import { MoonPhase } from './MoonPhase';
+import { playLevelStartSound } from '../utils/sounds';
 
 interface LevelIntroProps {
   levelNumber: number;
   levelName: string;
   onComplete: () => void;
-  onSkip?: () => void;
 }
 
-export const LevelIntro: React.FC<LevelIntroProps> = ({ levelNumber, levelName, onComplete, onSkip }) => {
-  const [phase, setPhase] = useState<'fadeIn' | 'hold' | 'fadeOut'>('fadeIn');
+const INTRO_MS = 2800;
 
+export function LevelIntro({ levelNumber, levelName, onComplete }: LevelIntroProps) {
+  const [leaving, setLeaving] = useState(false);
+  // The moon waxes from new to full while the intro plays
+  const [phase, setPhase] = useState(0);
+  // Parent passes a fresh callback each render; keep timers from restarting
+  const onCompleteRef = useRef(onComplete);
   useEffect(() => {
-    playLevelStartSound();
-
-    // Phase 1: Fade in (0.8s)
-    const holdTimer = setTimeout(() => setPhase('hold'), 800);
-
-    // Phase 2: Hold (1.5s)
-    const fadeOutTimer = setTimeout(() => setPhase('fadeOut'), 2300);
-
-    // Phase 3: Fade out (0.7s) then complete
-    const completeTimer = setTimeout(() => onComplete(), 3000);
-
-    return () => {
-      clearTimeout(holdTimer);
-      clearTimeout(fadeOutTimer);
-      clearTimeout(completeTimer);
-    };
+    onCompleteRef.current = onComplete;
   }, [onComplete]);
 
   useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        onSkip?.();
-      }
+    const complete = () => onCompleteRef.current();
+    playLevelStartSound();
+    const phaseTimer = setInterval(() => setPhase(p => Math.min(p + 1, 4)), 260);
+    const leaveTimer = setTimeout(() => setLeaving(true), INTRO_MS - 600);
+    const completeTimer = setTimeout(complete, INTRO_MS);
+    return () => {
+      clearInterval(phaseTimer);
+      clearTimeout(leaveTimer);
+      clearTimeout(completeTimer);
     };
+  }, []);
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [onSkip]);
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.code === 'Space' || e.key === 'Enter') onComplete();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onComplete]);
 
   return (
-    <motion.div
-      className="level-intro-overlay"
+    <motion.main
+      className="fixed inset-0 z-[50] flex flex-col items-center justify-center px-4 cursor-pointer select-none"
+      onClick={onComplete}
       initial={{ opacity: 0 }}
-      animate={{
-        opacity: phase === 'fadeOut' ? 0 : 1
-      }}
-      transition={{ duration: phase === 'fadeOut' ? 0.7 : 0.8 }}
+      animate={{ opacity: leaving ? 0 : 1 }}
+      transition={{ duration: leaving ? 0.6 : 0.5 }}
+      aria-label={`Level ${levelNumber}: ${levelName}`}
     >
-      {/* Mystical background effects */}
-      <MysticalBackground />
-
-      {/* Level number */}
       <motion.div
-        className="level-number"
-        initial={{ scale: 0, rotate: -180, opacity: 0 }}
-        animate={{
-          scale: phase === 'fadeOut' ? 0.8 : 1,
-          rotate: 0,
-          opacity: phase === 'fadeOut' ? 0 : 1
-        }}
-        transition={{
-          duration: 0.8,
-          type: 'spring',
-          stiffness: 100
-        }}
+        initial={{ scale: 0.6, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+        className="relative size-28 sm:size-36 mb-8"
       >
-        <div className="level-label">LEVEL</div>
-        <div className="number">{levelNumber}</div>
+        {/* Expanding halo rings */}
+        {[0, 0.6, 1.2].map(delay => (
+          <motion.div
+            key={delay}
+            className="absolute inset-0 rounded-full border border-accent/40"
+            initial={{ scale: 1, opacity: 0.7 }}
+            animate={{ scale: 4, opacity: 0 }}
+            transition={{ duration: 2.4, delay, repeat: Infinity, ease: 'easeOut' }}
+          />
+        ))}
+        <div className="absolute inset-0 rounded-full bg-moon/25 blur-3xl" />
+        <MoonPhase phase={phase} className="relative" />
       </motion.div>
 
-      {/* Level name with moon icon */}
-      <motion.div
-        className="level-name"
-        initial={{ y: 30, opacity: 0 }}
-        animate={{
-          y: phase === 'fadeOut' ? -20 : 0,
-          opacity: phase === 'fadeOut' ? 0 : 1
-        }}
-        transition={{ delay: 0.3, duration: 0.6 }}
+      <motion.p
+        initial={{ y: 12, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.15, duration: 0.5 }}
+        className="text-xs sm:text-sm font-semibold tracking-[0.6em] pl-[0.6em] uppercase text-ink-muted"
       >
-        <span className="moon-icon">🌙</span>
-        <span className="name-text">{levelName}</span>
-      </motion.div>
+        Level {levelNumber}
+      </motion.p>
+      <motion.h1
+        initial={{ y: 16, opacity: 0, letterSpacing: '0.5em' }}
+        animate={{ y: 0, opacity: 1, letterSpacing: '0.18em' }}
+        transition={{ delay: 0.3, duration: 0.9, ease: 'easeOut' }}
+        className="font-display font-black text-5xl sm:text-7xl uppercase mt-3 bg-gradient-to-b from-white via-moon-soft to-moon bg-clip-text text-transparent"
+      >
+        {levelName}
+      </motion.h1>
 
-      {/* Orbiting particles */}
-      <OrbitingParticles />
-
-      {/* Skip button removed as requested */}
-    </motion.div>
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.6 }}
+        transition={{ delay: 1 }}
+        className="absolute bottom-[max(24px,env(safe-area-inset-bottom))] text-[11px] tracking-[0.25em] uppercase text-ink-faint"
+      >
+        Tap to skip
+      </motion.p>
+    </motion.main>
   );
 }

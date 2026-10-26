@@ -1,385 +1,315 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { MoonCard } from './MoonCard';
+import { MoonPhase } from './MoonPhase';
+import { Button, IconButton } from './ui/Button';
+import { ArrowLeftIcon, ArrowRightIcon, CloseIcon } from './ui/Icons';
+import { OWNER_COLORS, SCORE_COLORS } from '../constants/theme';
 
 interface TutorialOverlayProps {
   onClose: () => void;
 }
 
-function TutorialCard({ phase, owner = 'player', isFaceDown = false }: { phase: number, owner?: 'player' | 'opponent', isFaceDown?: boolean }) {
-  const emojis = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
+type Owner = 'player' | 'opponent';
 
+interface DemoCard {
+  phase: number;
+  scoredBy?: Owner;
+  tag?: string;
+  empty?: boolean;
+  focus?: boolean;
+}
+
+// Inline moon glyph for use inside sentences
+const Moon = ({ phase }: { phase: number }) => (
+  <MoonPhase phase={phase} glow={false} size="1.15em" className="inline-block align-[-0.2em] mx-0.5" />
+);
+
+function CardRow({ cards, line, decorator }: { cards: DemoCard[], line?: string, decorator?: 'pair' | 'fullmoon' }) {
   return (
-    <div
-      className="tutorial-card transition-transform hover:-translate-y-2 relative w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] md:w-[80px] md:h-[80px] text-[24px] sm:text-[32px] md:text-[40px]"
-      style={{
-        borderRadius: '8px',
-        border: `3px solid ${owner === 'player' ? '#fff' : '#000'}`,
-        background: isFaceDown ? 'linear-gradient(135deg, #1a1a3e, #2d2d5f)' : 'linear-gradient(135deg, #1a1a2e, #16213e)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        boxShadow: owner === 'player' ? '0 0 15px rgba(255,255,255,0.3)' : '0 0 15px rgba(0,0,0,0.5)',
-      }}
-    >
-      <span style={{ opacity: isFaceDown ? 0.3 : 1, filter: isFaceDown ? 'none' : 'drop-shadow(0 0 8px rgba(255,255,255,0.5))' }}>
-        {isFaceDown ? '🌙' : emojis[phase]}
-      </span>
-      {!isFaceDown && (
-        <div className="absolute bottom-2 h-1 w-6 rounded-full bg-white/10 transition-colors duration-300"></div>
+    <div className="relative flex items-center gap-5 sm:gap-8 [--tc:48px] sm:[--tc:64px]">
+      {line && (
+        <div
+          className="absolute top-1/2 h-[3px] -translate-y-1/2 left-[calc(var(--tc)/2)] right-[calc(var(--tc)/2)] rounded-full"
+          style={{ background: line, boxShadow: `0 0 12px ${line}` }}
+        />
       )}
+      {decorator === 'pair' && (
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
+          {[0, 1].map(i => <span key={i} className="size-2.5 rounded-full bg-night-900 border-2" style={{ borderColor: SCORE_COLORS.PAIR }} />)}
+        </div>
+      )}
+      {decorator === 'fullmoon' && (
+        <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-3.5 rounded-full z-10" style={{ background: SCORE_COLORS.FULL_MOON, boxShadow: `0 0 10px ${SCORE_COLORS.FULL_MOON}` }} />
+      )}
+      {cards.map((c, i) => (
+        <div key={i} className="relative">
+          {c.tag && (
+            <span
+              className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold tracking-[0.15em] uppercase border bg-night-900"
+              style={{ color: OWNER_COLORS.opponent, borderColor: `${OWNER_COLORS.opponent}55` }}
+            >
+              {c.tag}
+            </span>
+          )}
+          {c.empty ? (
+            <div className="size-[var(--tc)] rounded-[22%] border-[1.5px] border-dashed border-white/20 bg-night-900/80 flex items-center justify-center">
+              <span className="size-1.5 rounded-full bg-white/25" />
+            </div>
+          ) : (
+            <div className={`rounded-[22%] ${c.focus ? 'ring-2 ring-accent ring-offset-4 ring-offset-night-900 animate-pulse-soft' : ''}`}>
+              <MoonCard card={c} className="size-[var(--tc)]" />
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
 
-const EmptySlot = ({ highlight = false }: { highlight?: boolean }) => (
-  <div className={`w-[60px] h-[60px] sm:w-[70px] sm:h-[70px] md:w-[80px] md:h-[80px]
-    rounded-[8px] border-2 border-dashed ${highlight ? 'border-indigo-400 bg-indigo-900/50' : 'border-indigo-500/30 bg-indigo-950/30'}
-    flex items-center justify-center transition-all duration-200`}>
-    <div className="w-2 h-2 rounded-full bg-indigo-500/50"></div>
-  </div>
+function ScoreTag({ text, color }: { text: string, color: string }) {
+  return (
+    <span className="font-sans tracking-tight text-xl sm:text-2xl font-black tracking-wider" style={{ color, textShadow: `0 0 18px ${color}88` }}>
+      {text}
+    </span>
+  );
+}
+
+const Caption = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-[10px] font-semibold tracking-[0.25em] uppercase text-ink-faint">{children}</span>
 );
 
 const DemoPlacement = () => (
-  <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 md:gap-6 my-4 sm:my-8 relative z-10 w-full">
-    <div className="flex items-center gap-4 sm:gap-8 md:gap-12">
-      <div className="flex flex-col items-center gap-2 sm:gap-3">
-        <TutorialCard phase={1} />
-        <span className="text-xs sm:text-sm md:text-base font-mono font-bold tracking-widest text-indigo-300">HAND</span>
-      </div>
-      <div className="text-2xl sm:text-3xl md:text-4xl text-indigo-400 font-black px-2 sm:px-4">→</div>
-      <div className="flex items-center gap-3 sm:gap-4 md:gap-6 relative">
-        <div className="absolute top-1/2 left-[20px] sm:left-[30px] md:left-[40px] right-[20px] sm:right-[30px] md:right-[40px] h-0.5 bg-indigo-500/50 -z-10" />
-        <div className="flex flex-col items-center gap-2 sm:gap-3 relative">
-          <TutorialCard phase={1} />
-          <span className="text-xs sm:text-sm md:text-base font-mono font-bold tracking-widest text-indigo-300">BOARD</span>
-          <div className="absolute -inset-2 sm:-inset-3 rounded-xl border-2 border-green-400 bg-green-500/10 shadow-[0_0_20px_rgba(74,222,128,0.4)] animate-pulse -z-10"></div>
-        </div>
-        <div className="flex flex-col items-center gap-2 sm:gap-3">
-          <EmptySlot />
-          <span className="text-sm font-mono font-bold tracking-widest opacity-0">EMPTY</span>
-        </div>
-      </div>
+  <div className="flex items-center gap-4 sm:gap-8">
+    <div className="flex flex-col items-center gap-3">
+      <CardRow cards={[{ phase: 1, focus: true }]} />
+      <Caption>Hand</Caption>
+    </div>
+    <ArrowRightIcon className="text-accent shrink-0" size={28} />
+    <div className="flex flex-col items-center gap-3">
+      <CardRow cards={[{ phase: 1 }, { phase: 0, empty: true }]} line="rgba(140,145,255,0.35)" />
+      <Caption>Star map</Caption>
     </div>
   </div>
 );
 
-const DemoPhasePair = () => (
-  <div className="flex flex-col items-center my-4 sm:my-8 gap-4 sm:gap-6 z-10 w-full">
-    <div className="flex items-center relative gap-8 sm:gap-12 md:gap-16">
-      <div className="absolute top-1/2 left-[20px] right-[20px] h-[3px] bg-gradient-to-r from-transparent via-blue-400 to-transparent -translate-y-1/2 -z-10" />
-      <TutorialCard phase={1} />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-between h-8 sm:h-10 z-10 pointer-events-none">
-        <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-[#111122] border-[2px] sm:border-[2.5px] border-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,1)]"></div>
-        <div className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full bg-[#111122] border-[2px] sm:border-[2.5px] border-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,1)]"></div>
-      </div>
-      <TutorialCard phase={1} />
-    </div>
-    <div className="animate-bounce text-xl sm:text-2xl font-black text-yellow-300 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] mt-2 uppercase tracking-widest">
-      +1 Pair!
-    </div>
+const DemoPair = () => (
+  <div className="flex flex-col items-center gap-5">
+    <CardRow cards={[{ phase: 1, scoredBy: 'player' }, { phase: 1, scoredBy: 'player' }]} line={SCORE_COLORS.PAIR} decorator="pair" />
+    <ScoreTag text="+1 Pair" color={SCORE_COLORS.PAIR} />
   </div>
 );
 
 const DemoFullMoon = () => (
-  <div className="flex flex-col items-center my-4 sm:my-8 gap-4 sm:gap-6 z-10 w-full">
-    <div className="flex items-center relative gap-8 sm:gap-12 md:gap-16">
-      <div className="absolute top-1/2 left-[20px] right-[20px] h-[3px] bg-gradient-to-r from-transparent via-yellow-400 to-transparent -translate-y-1/2 -z-10" />
-      <TutorialCard phase={1} />
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-yellow-400 border-[3px] border-yellow-400 z-10 drop-shadow-[0_0_8px_rgba(250,204,21,1)]"></div>
-      <TutorialCard phase={5} />
-    </div>
-    <div className="animate-bounce text-xl sm:text-2xl font-black text-yellow-300 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] mt-2 uppercase tracking-widest">
-      +2 Full Moon!
-    </div>
-    <div className="text-xs sm:text-sm md:text-base font-mono text-indigo-200/60 tracking-widest bg-indigo-950/40 px-3 sm:px-6 py-1 sm:py-2 rounded-xl mt-2 border border-indigo-500/20">
-      🌑 🌕 | 🌒 🌖 | 🌓 🌗 | 🌔 🌘
+  <div className="flex flex-col items-center gap-5">
+    <CardRow cards={[{ phase: 1, scoredBy: 'player' }, { phase: 5, scoredBy: 'player' }]} line={SCORE_COLORS.FULL_MOON} decorator="fullmoon" />
+    <ScoreTag text="+2 Full Moon" color={SCORE_COLORS.FULL_MOON} />
+    <div className="flex flex-wrap justify-center gap-2 text-lg">
+      {[[0, 4], [1, 5], [2, 6], [3, 7]].map(([a, b]) => (
+        <span key={a} className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.07]"><Moon phase={a} /><Moon phase={b} /></span>
+      ))}
     </div>
   </div>
 );
 
 const DemoChain = () => (
-  <div className="flex flex-col items-center my-4 sm:my-8 gap-3 sm:gap-4 md:gap-6 z-10 w-full">
-    <div className="flex items-center relative gap-4 sm:gap-6 md:gap-8">
-      <div className="absolute top-1/2 left-[15px] sm:left-[30px] md:left-[40px] right-[15px] sm:right-[30px] md:right-[40px] h-[3px] bg-purple-500 -translate-y-1/2 -z-10 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
-      <div className="relative"><TutorialCard phase={0} /><div className="absolute -inset-1 sm:-inset-2 rounded-xl border-[2px] sm:border-[3px] border-yellow-300 pointer-events-none shadow-[0_0_20px_rgba(253,224,71,0.6)] z-20"></div></div>
-      <div className="relative"><TutorialCard phase={1} /><div className="absolute -inset-1 sm:-inset-2 rounded-xl border-[2px] sm:border-[3px] border-yellow-300 pointer-events-none shadow-[0_0_20px_rgba(253,224,71,0.6)] z-20"></div></div>
-      <div className="relative"><TutorialCard phase={2} /><div className="absolute -inset-1 sm:-inset-2 rounded-xl border-[2px] sm:border-[3px] border-yellow-300 pointer-events-none shadow-[0_0_20px_rgba(253,224,71,0.6)] z-20"></div></div>
-      <div className="relative"><TutorialCard phase={3} /><div className="absolute -inset-1 sm:-inset-2 rounded-xl border-[2px] sm:border-[3px] border-yellow-300 pointer-events-none shadow-[0_0_20px_rgba(253,224,71,0.6)] z-20"></div></div>
-    </div>
-    <div className="animate-bounce text-xl sm:text-2xl font-black text-yellow-300 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] mt-2 sm:mt-4 uppercase tracking-widest">
-      +4 Chain!
-    </div>
+  <div className="flex flex-col items-center gap-5">
+    <CardRow cards={[0, 1, 2, 3].map(phase => ({ phase, scoredBy: 'player' as const }))} line={SCORE_COLORS.CHAIN} />
+    <ScoreTag text="+4 Lunar Cycle" color={SCORE_COLORS.CHAIN} />
   </div>
 );
 
 const DemoSteal = () => (
-  <div className="flex flex-col items-center my-4 sm:my-8 gap-4 sm:gap-8 z-10 w-full">
-    <div className="flex items-center relative gap-4 sm:gap-6 md:gap-8">
-      <div className="absolute top-1/2 left-[15px] sm:left-[30px] md:left-[40px] right-[40px] sm:right-[70px] md:right-[100px] h-[3px] bg-purple-500 -translate-y-1/2 -z-10 drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
-      <div className="absolute top-1/2 left-[180px] sm:left-[210px] md:left-[250px] right-[15px] sm:right-[30px] md:right-[40px] h-[3px] bg-red-500 -translate-y-1/2 -z-10 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-
-      <div className="relative">
-        <div className="absolute -top-4 sm:-top-6 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs text-red-400 font-bold tracking-widest w-[60px] sm:w-[80px] text-center bg-red-950/90 px-1 py-0.5 sm:px-2 sm:py-1 rounded border border-red-500/50 whitespace-nowrap z-30">STOLEN</div>
-        <TutorialCard phase={0} owner="opponent" />
-        <div className="absolute -inset-1 sm:-inset-2 rounded-xl border-[2px] sm:border-[3px] border-red-500 pointer-events-none shadow-[0_0_20px_rgba(239,68,68,0.6)] z-20"></div>
-      </div>
-      <div className="relative">
-        <div className="absolute -top-4 sm:-top-6 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs text-red-400 font-bold tracking-widest w-[60px] sm:w-[80px] text-center bg-red-950/90 px-1 py-0.5 sm:px-2 sm:py-1 rounded border border-red-500/50 whitespace-nowrap z-30">STOLEN</div>
-        <TutorialCard phase={1} owner="opponent" />
-        <div className="absolute -inset-1 sm:-inset-2 rounded-xl border-[2px] sm:border-[3px] border-red-500 pointer-events-none shadow-[0_0_20px_rgba(239,68,68,0.6)] z-20"></div>
-      </div>
-      <div className="relative">
-        <div className="absolute -top-4 sm:-top-6 left-1/2 -translate-x-1/2 text-[10px] sm:text-xs text-red-400 font-bold tracking-widest w-[60px] sm:w-[80px] text-center bg-red-950/90 px-1 py-0.5 sm:px-2 sm:py-1 rounded border border-red-500/50 whitespace-nowrap z-30">STOLEN</div>
-        <TutorialCard phase={2} owner="opponent" />
-        <div className="absolute -inset-1 sm:-inset-2 rounded-xl border-[2px] sm:border-[3px] border-red-500 pointer-events-none shadow-[0_0_20px_rgba(239,68,68,0.6)] z-20"></div>
-      </div>
-      <div className="relative">
-        <div className="absolute -top-6 sm:-top-8 left-1/2 -translate-x-1/2 text-[8px] sm:text-[10px] text-red-200 font-bold tracking-widest w-[70px] sm:w-[90px] text-center bg-red-900 px-1 py-0.5 sm:px-2 sm:py-1 rounded border border-red-400 whitespace-nowrap z-30 uppercase leading-tight">Opponent<br />Move</div>
-        <TutorialCard phase={3} owner="opponent" />
-        <div className="absolute -inset-1 sm:-inset-2 rounded-xl border-[2px] sm:border-[3px] border-red-500 pointer-events-none shadow-[0_0_20px_rgba(239,68,68,0.8)] z-20"></div>
-      </div>
+  <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-2">
+      <Caption>Your cycle</Caption>
+      <CardRow cards={[{ phase: 0, scoredBy: 'player' }, { phase: 1, scoredBy: 'player' }, { phase: 2, scoredBy: 'player' }, { phase: 3, empty: true }]} line={SCORE_COLORS.CHAIN} />
+    </div>
+    <ArrowRightIcon className="rotate-90 text-opponent" size={22} />
+    <div className="flex flex-col items-center gap-2 pt-5">
+      <CardRow
+        cards={[{ phase: 0, scoredBy: 'opponent', tag: 'Stolen' }, { phase: 1, scoredBy: 'opponent', tag: 'Stolen' }, { phase: 2, scoredBy: 'opponent', tag: 'Stolen' }, { phase: 3, scoredBy: 'opponent', tag: 'Played' }]}
+        line={OWNER_COLORS.opponent}
+      />
     </div>
   </div>
 );
 
 const DemoWin = () => (
-  <div className="flex flex-col items-center justify-center my-4 sm:my-8 gap-4 sm:gap-6 relative w-full">
-    <div className="flex items-center gap-4 sm:gap-8 md:gap-16 font-mono text-sm sm:text-lg md:text-xl">
-      <div className="flex flex-col items-center opacity-50 scale-75 sm:scale-90 bg-red-950/30 p-4 sm:p-6 md:p-8 rounded-2xl md:rounded-3xl border border-red-500/20 backdrop-blur-sm shadow-[0_0_20px_rgba(220,38,38,0.1)]">
-        <span className="text-red-400 font-bold mb-2 md:mb-4 tracking-widest text-sm sm:text-base md:text-lg px-2 md:px-4 py-1 border-b border-red-500/30">HALF MOON</span>
-        <span className="text-2xl sm:text-3xl md:text-4xl text-gray-300 font-bold mt-2 md:mt-4">12 PTS</span>
+  <div className="flex items-center gap-4 sm:gap-8">
+    {[{ label: 'Half Moon', score: 12, color: OWNER_COLORS.opponent, win: false }, { label: 'You', score: 18, color: OWNER_COLORS.player, win: true }].map(s => (
+      <div
+        key={s.label}
+        className={`relative rounded-2xl border px-6 py-4 sm:px-8 sm:py-5 flex flex-col items-center ${s.win ? 'scale-110' : 'opacity-60'}`}
+        style={{ borderColor: s.win ? `${s.color}66` : 'rgba(255,255,255,0.08)', background: s.win ? `${s.color}12` : 'transparent' }}
+      >
+        {s.win && <span className="absolute -top-3 px-2 py-0.5 rounded-full bg-moon text-night-950 text-[10px] font-bold tracking-[0.2em]">WINNER</span>}
+        <span className="text-[10px] font-semibold tracking-[0.25em] uppercase" style={{ color: s.color }}>{s.label}</span>
+        <span className="font-sans tracking-tight text-3xl sm:text-4xl font-black mt-1">{s.score}</span>
       </div>
-      <div className="text-3xl sm:text-4xl md:text-6xl font-black text-white/5 italic px-2 sm:px-4">VS</div>
-      <div className="flex flex-col items-center drop-shadow-[0_0_30px_rgba(165,180,252,0.4)] scale-90 sm:scale-100 md:scale-110 bg-indigo-950/40 p-4 sm:p-6 md:p-8 rounded-2xl md:rounded-3xl border border-indigo-400/40 backdrop-blur-md relative shadow-[0_0_40px_rgba(99,102,241,0.2)]">
-        <div className="absolute -top-4 sm:-top-6 text-yellow-300 font-black tracking-widest text-sm sm:text-base md:text-xl animate-pulse bg-yellow-900/60 px-4 sm:px-6 py-1 sm:py-2 rounded-lg md:rounded-xl border border-yellow-500/50 whitespace-nowrap shadow-[0_0_15px_rgba(250,204,21,0.4)]">WINNER!</div>
-        <span className="text-indigo-300 font-bold mb-2 md:mb-4 tracking-widest text-sm sm:text-base md:text-lg mt-1 sm:mt-2 px-2 sm:px-4 py-1 border-b border-indigo-500/30">YOU</span>
-        <span className="text-3xl sm:text-4xl md:text-5xl text-yellow-400 font-black drop-shadow-[0_0_15px_rgba(250,204,21,0.5)] mt-2 md:mt-4">18 PTS</span>
-      </div>
-    </div>
+    ))}
   </div>
 );
 
+const Strong = ({ children, color }: { children: React.ReactNode, color?: string }) => (
+  <strong className="font-semibold text-ink" style={color ? { color } : undefined}>{children}</strong>
+);
 
-const tutorialSteps = [
+const tutorialSteps: { eyebrow: string, title: string, visual: React.ReactNode, body: React.ReactNode, danger?: boolean }[] = [
   {
-    title: "How to Play",
-    content: (
-      <div className="text-left w-full sm:w-4/5 mx-auto">
-        <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 mb-2 sm:mb-4 leading-relaxed tracking-wide">
-          Welcome to <span className="text-indigo-300 font-bold">Rise of the Half Moon</span>.
-        </p>
-        <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 leading-relaxed mb-2 sm:mb-4 tracking-wide">
-          Target: Score more points than your opponent by placing moon phase cards strategically on the star map.
-        </p>
-        <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 leading-relaxed tracking-wide">
-          Place cards <strong className="text-indigo-200">anywhere</strong> on the star map!
-        </p>
-      </div>
+    eyebrow: 'Welcome',
+    title: 'How to Play',
+    visual: <DemoPlacement />,
+    body: (
+      <>
+        <p>Score more points than the <Strong color={OWNER_COLORS.opponent}>Half Moon</Strong> by placing moon phase cards on the star map.</p>
+        <p>Tap a card in your hand, then tap <Strong>any empty spot</Strong>. You can also drag it there.</p>
+      </>
     ),
-    visual: <DemoPlacement />
   },
   {
-    title: "Phase Pair = 1 Point",
-    content: (
-      <div className="text-left w-full sm:w-4/5 mx-auto">
-        <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 leading-relaxed mb-2 sm:mb-4 tracking-wide">
-          Match <strong className="text-indigo-300">identical moon phases</strong> directly connected to score exactly <strong className="text-yellow-300">+1 point</strong>.
-        </p>
-        <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 leading-relaxed tracking-wide">
-          E.g., Waxing Crescent + Waxing Crescent = 1 Point!
-        </p>
-      </div>
-    ),
-    visual: <DemoPhasePair />
+    eyebrow: 'Scoring · 1 point',
+    title: 'Phase Pair',
+    visual: <DemoPair />,
+    body: <p>Place a card next to a connected card with the <Strong color={SCORE_COLORS.PAIR}>same phase</Strong>, like <Moon phase={1} /> + <Moon phase={1} />.</p>,
   },
   {
-    title: "Full Moon Pair = 2 Points",
-    content: (
-      <div className="text-left w-full sm:w-4/5 mx-auto">
-        <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 leading-relaxed tracking-wide">
-          Place <strong className="text-yellow-300">opposite phases</strong> adjacent to each other to form a Full Moon and score <strong className="text-yellow-300">+2 points</strong>!
-        </p>
-      </div>
-    ),
-    visual: <DemoFullMoon />
+    eyebrow: 'Scoring · 2 points',
+    title: 'Full Moon Pair',
+    visual: <DemoFullMoon />,
+    body: <p>Connect two <Strong color={SCORE_COLORS.FULL_MOON}>opposite phases</Strong>. Together they make a full moon.</p>,
   },
   {
-    title: "Lunar Cycle = N Points",
-    content: (
-      <div className="text-left w-full sm:w-4/5 mx-auto">
-        <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 leading-relaxed mb-2 sm:mb-4 tracking-wide">
-          The most powerful move. Connect 3 or more phases in chronological order (<strong className="text-yellow-300">🌑&rarr;🌒&rarr;🌓</strong> or <strong className="text-yellow-300">🌘&rarr;🌑&rarr;🌒</strong>).
-        </p>
-        <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 leading-relaxed tracking-wide">
-          You will score points equal to the <strong className="text-yellow-300">entire length of the chain</strong> you just completed. (a 4-card chain = 4 points!).
-        </p>
-      </div>
+    eyebrow: 'Scoring · N points',
+    title: 'Lunar Cycle',
+    visual: <DemoChain />,
+    body: (
+      <>
+        <p>Link <Strong color={SCORE_COLORS.CHAIN}>3 or more phases in order</Strong>, like <Moon phase={0} /><Moon phase={1} /><Moon phase={2} /> or <Moon phase={7} /><Moon phase={0} /><Moon phase={1} />.</p>
+        <p>You score one point for every card in the cycle.</p>
+      </>
     ),
-    visual: <DemoChain />
   },
   {
-    title: "⚠️ Chain Steal",
-    content: (
-      <div className="text-left w-full sm:w-4/5 mx-auto">
-        <p className="text-sm sm:text-base md:text-lg text-red-200/90 leading-relaxed mb-2 sm:mb-4 tracking-wide">
-          Be careful with chains! If your opponent places a card that <strong className="text-red-400">extends your chain</strong>, they will <strong className="text-red-400 font-bold uppercase underline">STEAL</strong> the entire chain!
-        </p>
-        <p className="text-sm sm:text-base md:text-lg text-red-200/90 leading-relaxed tracking-wide">
-          All stolen cards become theirs, and they instantly get the points for the full new length! Long chains are high risk.
-        </p>
-      </div>
-    ),
-    visual: <DemoSteal />
+    eyebrow: 'Watch out',
+    title: 'Cycle Steal',
+    danger: true,
+    visual: <DemoSteal />,
+    body: <p>If your opponent <Strong color={OWNER_COLORS.opponent}>extends your cycle</Strong>, they steal every card in it and score the full new length. Long cycles are high risk.</p>,
   },
   {
-    title: "Win the Round!",
-    content: (
-      <div className="text-left w-full sm:w-4/5 mx-auto">
-        <p className="text-sm sm:text-base md:text-lg text-indigo-100/80 leading-relaxed mb-2 sm:mb-4 tracking-wide">
-          The game ends when the board is <strong className="text-indigo-300">completely full</strong>.
-        </p>
-        <ul className="text-sm sm:text-base md:text-lg text-indigo-200/70 text-left list-disc pl-4 sm:pl-6 space-y-1 sm:space-y-2 mb-2 sm:mb-4 tracking-wide">
-          <li><strong className="text-indigo-300">Final Score:</strong> Player with the most points wins.</li>
-        </ul>
-        <p className="text-base sm:text-xl md:text-2xl text-indigo-100/80 leading-relaxed italic text-center mt-4 sm:mt-6">
-          Good luck, and may the moon guide your path.
-        </p>
-      </div>
+    eyebrow: 'Endgame',
+    title: 'Win the Round',
+    visual: <DemoWin />,
+    body: (
+      <>
+        <p>The round ends when the board is full. Each card you scored adds <Strong>+1 bonus</Strong>.</p>
+        <p className="italic text-ink-muted">May the moon guide your path.</p>
+      </>
     ),
-    visual: <DemoWin />
-  }
+  },
 ];
 
 export function TutorialOverlay({ onClose }: TutorialOverlayProps) {
-  const [step, setStep] = useState(0);
-  const currentStep = tutorialSteps[step];
+  const [[step, direction], setStepState] = useState<[number, number]>([0, 0]);
+  const current = tutorialSteps[step];
+  const isLast = step === tutorialSteps.length - 1;
 
-  const [slideDirection, setSlideDirection] = useState<'left' | 'right' | null>(null);
+  const goTo = useCallback((next: number) => {
+    if (next < 0 || next >= tutorialSteps.length) return;
+    setStepState(([prev]) => [next, next > prev ? 1 : -1]);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      } else if (e.key === 'ArrowRight') {
-        if (step < tutorialSteps.length - 1) {
-          setSlideDirection('left');
-          setTimeout(() => {
-            setStep(prev => prev + 1);
-            setSlideDirection(null);
-          }, 150);
-        }
-      } else if (e.key === 'ArrowLeft') {
-        if (step > 0) {
-          setSlideDirection('right');
-          setTimeout(() => {
-            setStep(prev => prev - 1);
-            setSlideDirection(null);
-          }, 150);
-        }
-      }
+      if (e.key === 'Escape') onClose();
+      else if (e.key === 'ArrowRight') goTo(step + 1);
+      else if (e.key === 'ArrowLeft') goTo(step - 1);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [step, onClose]);
-
-  const handleNext = () => {
-    if (step < tutorialSteps.length - 1) {
-      setSlideDirection('left');
-      setTimeout(() => {
-        setStep(prev => prev + 1);
-        setSlideDirection(null);
-      }, 150);
-    } else {
-      onClose();
-    }
-  };
-
-  const handlePrev = () => {
-    if (step > 0) {
-      setSlideDirection('right');
-      setTimeout(() => {
-        setStep(prev => prev - 1);
-        setSlideDirection(null);
-      }, 150);
-    }
-  };
+  }, [step, onClose, goTo]);
 
   return (
-    <div className="fixed flex inset-0 z-[100] items-center justify-center bg-black/80 backdrop-blur-xl animate-in fade-in duration-300 min-h-[100vh] p-4 sm:p-6 md:p-8">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:p-6 bg-night-950/75 backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+      aria-label="How to play"
+    >
+      <motion.div
+        initial={{ y: 16, scale: 0.97 }}
+        animate={{ y: 0, scale: 1 }}
+        className="relative w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] flex flex-col rounded-3xl overflow-hidden bg-gradient-to-b from-night-800/95 to-night-900/95 border border-white/10"
+        style={{ boxShadow: '0 30px 80px -20px rgba(0,0,0,0.8), 0 0 60px -10px rgba(139,123,255,0.35)' }}
+      >
+        <IconButton label="Close tutorial" onClick={onClose} className="absolute top-3 right-3 z-10 size-9">
+          <CloseIcon size={16} />
+        </IconButton>
 
-      {/* Background celestial glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] sm:w-[500px] sm:h-[500px] md:w-[800px] md:h-[800px] rounded-full bg-indigo-900/20 blur-[60px] md:blur-[100px] pointer-events-none"></div>
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
+          <AnimatePresence mode="wait" custom={direction} initial={false}>
+            <motion.div
+              key={step}
+              custom={direction}
+              initial={{ opacity: 0, x: direction * 40 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: direction * -40 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="flex flex-col"
+            >
+              <div className="text-center pt-8 px-6">
+                <p className={`text-[11px] font-semibold tracking-[0.3em] uppercase ${current.danger ? 'text-opponent' : 'text-ink-faint'}`}>{current.eyebrow}</p>
+                <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-wider mt-1 text-ink">{current.title}</h2>
+              </div>
 
-      <div className="relative w-full max-w-[95vw] sm:max-w-[90vw] md:max-w-[600px] lg:max-w-4xl bg-[#0a0a1a] border border-indigo-500/30 rounded-2xl md:rounded-[2rem] p-6 sm:p-8 md:p-12 shadow-[0_0_100px_rgba(30,27,75,0.9)] overflow-hidden flex flex-col min-h-[500px] sm:min-h-[600px] md:min-h-[750px]">
+              <div className="mx-4 sm:mx-8 mt-6 rounded-2xl border border-white/[0.06] bg-night-950/50 min-h-[220px] sm:min-h-[260px] flex items-center justify-center px-3 py-8">
+                {current.visual}
+              </div>
 
-        {/* Dynamic content rendering with sliding transition classes */}
-        <div className={`flex-grow flex flex-col justify-between transition-all duration-300 transform 
-           ${slideDirection === 'left' ? '-translate-x-full opacity-0' : slideDirection === 'right' ? 'translate-x-full opacity-0' : 'translate-x-0 opacity-100'}
-        `}>
-          <div className="flex flex-col h-full">
-            <h2 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black mb-4 sm:mb-6 md:mb-8 tracking-widest uppercase flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 md:gap-6 mt-2 sm:mt-4 text-center ${step === 4 ? 'text-red-400 drop-shadow-[0_0_15px_rgba(248,113,113,0.8)]' : 'text-indigo-300 drop-shadow-[0_0_15px_rgba(165,180,252,0.8)]'}`}>
-              {step === 0 && <span className="text-yellow-200">🌙</span>}
-              {currentStep.title}
-            </h2>
-
-            <div className="w-full flex-grow flex items-center justify-center bg-indigo-950/20 rounded-xl sm:rounded-2xl md:rounded-3xl border border-indigo-500/10 shadow-inner mb-4 sm:mb-6 md:mb-8 py-4 sm:py-6 md:py-8 px-2 sm:px-4 md:px-6 min-h-[150px] sm:min-h-[250px] md:min-h-[300px]">
-              {currentStep.visual}
-            </div>
-
-            <div className="text-center px-2 sm:px-4 md:px-8 min-h-[100px] sm:min-h-[120px] md:min-h-[150px] flex items-center justify-center">
-              {currentStep.content}
-            </div>
-          </div>
+              <div className="px-6 sm:px-12 py-6 text-center text-sm sm:text-base text-ink-muted leading-relaxed space-y-2 min-h-[120px]">
+                {current.body}
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
 
-        {/* Footer Navigation */}
-        <div className="mt-4 sm:mt-6 md:mt-8 pt-4 sm:pt-6 md:pt-8 border-t border-indigo-500/20 flex flex-col gap-4 sm:gap-6 md:gap-8">
-          {/* Progress Dots */}
-          <div className="flex justify-center gap-2 sm:gap-3 md:gap-4 flex-wrap">
-            {tutorialSteps.map((_, i) => (
+        <div className="shrink-0 border-t border-white/[0.07] px-4 sm:px-8 py-4 flex items-center justify-between gap-3">
+          <Button variant="ghost" onClick={onClose} className="px-3">Skip</Button>
+
+          <div className="flex gap-1.5" role="tablist" aria-label="Tutorial steps">
+            {tutorialSteps.map((s, i) => (
               <button
                 key={i}
-                onClick={() => setStep(i)}
-                className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full transition-all duration-300 ${i === step ? 'bg-indigo-300 scale-125 shadow-[0_0_15px_rgba(165,180,252,0.8)]' : 'bg-indigo-900/60 hover:bg-indigo-700/80 cursor-pointer'}`}
-                aria-label={`Go to step ${i + 1}`}
+                type="button"
+                role="tab"
+                aria-selected={i === step}
+                aria-label={`Step ${i + 1}: ${s.title}`}
+                onClick={() => goTo(i)}
+                className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${i === step ? 'w-6 bg-accent' : 'w-1.5 bg-white/20 hover:bg-white/40'}`}
               />
             ))}
           </div>
 
-          {/* Navigation Buttons */}
-          <div className="flex flex-col sm:flex-row justify-between items-center w-full gap-4 sm:gap-0">
-            <button
-              onClick={onClose}
-              className="text-indigo-400/60 hover:text-indigo-300 font-bold tracking-widest text-xs sm:text-sm md:text-lg transition-colors uppercase px-4 py-2 order-2 sm:order-1"
-            >
-              Skip Tutorial
-            </button>
-
-            <div className="flex gap-3 sm:gap-4 md:gap-6 order-1 sm:order-2">
-              <button
-                onClick={handlePrev}
-                disabled={step === 0}
-                className={`px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-4 font-bold tracking-widest uppercase rounded-lg sm:rounded-xl border border-indigo-500/30 transition-all shadow-lg text-xs sm:text-sm md:text-lg
-                     ${step === 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-indigo-900/40 hover:border-indigo-400 hover:shadow-[0_0_20px_rgba(99,102,241,0.2)] text-indigo-200'}
-                   `}
-              >
-                ← Back
-              </button>
-              <button
-                onClick={handleNext}
-                className={`px-4 py-2 sm:px-6 sm:py-3 md:px-8 md:py-4 font-bold tracking-widest uppercase rounded-lg sm:rounded-xl transition-all shadow-lg text-xs sm:text-sm md:text-lg
-                     ${step === tutorialSteps.length - 1
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-[0_0_40px_rgba(99,102,241,0.6)] border border-indigo-300 border-2 scale-105'
-                    : 'bg-indigo-900/60 border border-indigo-500/50 hover:bg-indigo-800/80 hover:border-indigo-400 hover:shadow-[0_0_30px_rgba(99,102,241,0.4)] text-white'}
-                   `}
-              >
-                {step === tutorialSteps.length - 1 ? 'Start Game' : 'Next →'}
-              </button>
-            </div>
+          <div className="flex gap-2">
+            <IconButton label="Previous step" onClick={() => goTo(step - 1)} disabled={step === 0} className="size-11 disabled:opacity-30 disabled:pointer-events-none">
+              <ArrowLeftIcon size={18} />
+            </IconButton>
+            {isLast ? (
+              <Button variant="primary" onClick={onClose} autoFocus>Let&apos;s go</Button>
+            ) : (
+              <IconButton label="Next step" onClick={() => goTo(step + 1)} className="size-11 text-ink bg-accent/20 border-accent/40 hover:bg-accent/30">
+                <ArrowRightIcon size={18} />
+              </IconButton>
+            )}
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
