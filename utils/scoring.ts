@@ -63,58 +63,64 @@ export function checkFullMoonPairs(nodeMap: NodeMap, placedNode: BoardNode): Sco
 }
 
 export function findLunarChains(nodeMap: NodeMap, placedNode: BoardNode): ScoringEvent[] {
-  const events: ScoringEvent[] = [];
   const card = placedNode.card;
   if (!card) return [];
 
-  function dfs(currentId: string, phaseDelta: 1 | -1, visited: Set<string>): string[] {
+  // Every maximal path from currentId following phases in one direction. Each path starts
+  // with currentId. At a fork, both branches are kept, so one placement can score several cycles.
+  function allPaths(currentId: string, phaseDelta: 1 | -1, visited: Set<string>): string[][] {
     const node = nodeMap.get(currentId);
     if (!node || !node.card) return [];
 
-    let longestPath: string[] = [];
     visited.add(currentId);
+    const expectedPhase = (node.card.phase + phaseDelta + 8) % 8;
+    const nextIds = Array.from(nodeMap.values())
+      .filter(n =>
+        !visited.has(n.id) &&
+        n.card?.phase === expectedPhase &&
+        (node.connectedTo.includes(n.id) || n.connectedTo.includes(node.id))
+      )
+      .map(n => n.id);
 
-    const neighbors = Array.from(nodeMap.values()).filter(n =>
-      node.connectedTo.includes(n.id) || n.connectedTo.includes(node.id)
-    );
-
-    for (const neighbor of neighbors) {
-      if (!visited.has(neighbor.id)) {
-        if (neighbor && neighbor.card) {
-          const expectedPhase = (node.card.phase + phaseDelta + 8) % 8;
-          if (neighbor.card.phase === expectedPhase) {
-            const subPath = dfs(neighbor.id, phaseDelta, new Set(visited));
-            if (subPath.length > longestPath.length) {
-              longestPath = subPath;
-            }
-          }
-        }
-      }
-    }
-
+    const paths = nextIds.length === 0
+      ? [[currentId]]
+      : nextIds.flatMap(nextId => allPaths(nextId, phaseDelta, visited).map(path => [currentId, ...path]));
     visited.delete(currentId);
-    return [currentId, ...longestPath];
+    return paths;
   }
 
-  // Find longest path going "up" the phases
-  const forwardAsc = dfs(placedNode.id, 1, new Set()); // [placed, +1, +2, ...]
+  const forwardPaths = allPaths(placedNode.id, 1, new Set()); // [placed, +1, +2, ...]
+  const backwardPaths = allPaths(placedNode.id, -1, new Set()); // [placed, -1, -2, ...]
 
-  // Find longest path going "down" the phases
-  const backwardAsc = dfs(placedNode.id, -1, new Set()); // [placed, -1, -2, ...]
+  const chains: string[][] = [];
+  for (const backward of backwardPaths) {
+    for (const forward of forwardPaths) {
+      // On a ring the two directions can meet; stop the backward half where the forward half begins
+      const forwardIds = new Set(forward);
+      const overlapAt = backward.findIndex((id, i) => i > 0 && forwardIds.has(id));
+      const trimmedBackward = overlapAt === -1 ? backward : backward.slice(0, overlapAt);
 
-  // backwardAsc is [placed, -1, -2]. Reversing it gives [-2, -1, placed].
-  // forwardAsc is [placed, +1, +2]. Slicing it gives [+1, +2].
-  // chain = [-2, -1, placed, +1, +2]
-  const chainAsc = [...backwardAsc.reverse().slice(0, -1), ...forwardAsc];
-
-  if (chainAsc.length >= 3) {
-    events.push({
-      points: chainAsc.length,
-      owner: card.owner as 'player' | 'opponent',
-      type: 'CHAIN',
-      nodeIds: chainAsc
-    });
+      // [-2, -1, placed] + [+1, +2]
+      const chain = [...[...trimmedBackward].reverse(), ...forward.slice(1)];
+      if (chain.length >= 3) chains.push(chain);
+    }
   }
+
+  // Drop repeats and chains fully contained in a longer one
+  const distinct = chains.filter((chain, i) =>
+    !chains.some((other, j) =>
+      j !== i &&
+      (other.length > chain.length || (other.length === chain.length && j < i)) &&
+      chain.every(id => other.includes(id))
+    )
+  );
+
+  const events: ScoringEvent[] = distinct.map(chain => ({
+    points: chain.length,
+    owner: card.owner as 'player' | 'opponent',
+    type: 'CHAIN',
+    nodeIds: chain
+  }));
 
   return events;
 }
