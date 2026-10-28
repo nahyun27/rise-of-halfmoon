@@ -55,6 +55,7 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
   },
   robots: { index: true, follow: true },
+  verification: { google: "fd8eifjTtLMOczBTMq_pRTjOcu73sD-LLvHHWrvCqSQ" },
 };
 
 // Structured data so search engines know this page is a free, playable browser game
