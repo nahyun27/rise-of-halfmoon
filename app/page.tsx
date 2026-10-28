@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MotionConfig, AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { MoonCard } from "../components/MoonCard";
+import { MoonPhase } from "../components/MoonPhase";
 import { MoonCard as MoonCardType, GameState, GamePhase } from "../types/game";
 import { evaluateGraphPlacement, ScoringEvent } from "../utils/scoring";
 import { aiTurn } from "../utils/ai";
@@ -642,7 +643,27 @@ export default function Home() {
     runAnimations();
   };
 
-  if (!hasMounted) return null;
+  // Saved progress lives in localStorage, so the real screens wait for the client. Until then
+  // (and in the server HTML search engines read) show a splash with the game's name and pitch.
+  if (!hasMounted) {
+    return (
+      <>
+        <CosmicBackground />
+        <main className="min-h-dvh flex flex-col items-center justify-center px-6 text-center">
+          <div className="size-24 mb-8 animate-float">
+            <MoonPhase phase={2} />
+          </div>
+          <h1 className="font-display font-black leading-none">
+            <span className="block text-sm tracking-[0.5em] text-ink-muted pl-[0.5em]">RISE OF THE</span>
+            <span className="block mt-3 text-5xl tracking-[0.08em] text-moon">HALF MOON</span>
+          </h1>
+          <p className="mt-5 max-w-md text-sm text-ink-muted leading-relaxed">
+            A moon phase card game. Match phases, form full moons and build lunar cycles to outscore the Half Moon.
+          </p>
+        </main>
+      </>
+    );
+  }
 
   // --------------------------------------------------------------------------
   // SCREENS
