@@ -14,7 +14,7 @@ const C = 50;
 
 // Lit area of the moon as seen from the northern hemisphere: waxing phases are lit
 // on the right. The terminator is a half-ellipse whose x-radius is r·|cos θ|.
-function litPath(phase: number): string | null {
+export function litPath(phase: number): string | null {
   if (phase === 0) return null;
   if (phase === 4) return `M ${C} ${C - R} A ${R} ${R} 0 1 1 ${C} ${C + R} A ${R} ${R} 0 1 1 ${C} ${C - R} Z`;
 
